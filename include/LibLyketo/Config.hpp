@@ -5,7 +5,6 @@
 #pragma once
 
 #include "CompressAlgorithms.hpp"
-#include "Utility.hpp"
 
 #include <stdint.h>
 #include <map>
@@ -73,9 +72,7 @@ struct ProtoConfig
 	uint32_t dwItemFourCCOld;
 	uint32_t dwMobFourCC;
 
-	ProtoConfig() : dwItemVersion(1), dwItemFourCC(Utility::FromByteArray("MIPX")), dwItemStride(163), dwItemFourCCOld(Utility::FromByteArray("MIPT")), dwMobFourCC(Utility::FromByteArray("MMPT"))
-	{
-	}
+	ProtoConfig();
 };
 
 class Config

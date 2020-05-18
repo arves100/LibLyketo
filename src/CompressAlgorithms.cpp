@@ -1,5 +1,5 @@
-#include "CompressAlgorithms.hpp"
-#include "lzokay/lzokay.hpp"
+#include <LibLyketo/CompressAlgorithms.hpp>
+#include <lzokay/lzokay.hpp>
 
 // LZO (MCOZ)
 bool CompressAlgorithmLzo1x::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)

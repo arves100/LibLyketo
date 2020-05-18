@@ -2,7 +2,8 @@
 	@file Config.cpp
 	Defines a configuration class for LibLyketo
 */
-#include "Config.hpp"
+#include <LibLyketo/Config.hpp>
+#include "Utility.hpp"
 
 // CryptedObjectConfig
 CryptedObjectConfig::CryptedObjectConfig() : m_dwForcedAlgorithm(0)
@@ -71,6 +72,12 @@ ICompressAlgorithm* CryptedObjectConfig::GetForcedAlgorithmOrDefault(uint32_t& d
 }
 // ------------------------------------------------------------------------------------------------------------------
 
+// ProtoConfig
+ProtoConfig::ProtoConfig() : dwItemVersion(1), dwItemFourCC(Utility::FromByteArray("MIPX")), dwItemStride(163), dwItemFourCCOld(Utility::FromByteArray("MIPT")), dwMobFourCC(Utility::FromByteArray("MMPT"))
+{
+}
+// ------------------------------------------------------------------------------------------------------------------
+
 // Config
 Config::Config() : m_upCryptedConfig(new CryptedObjectConfig()), m_sProto()
 {
@@ -83,3 +90,4 @@ Config::~Config()
 }
 
 Config* Config::m_pInstance = nullptr;
+// ------------------------------------------------------------------------------------------------------------------

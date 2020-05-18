@@ -2,8 +2,8 @@
 	@file Proto.cpp
 	Defines an Item or Mob Proto format.
 */
-#include "Proto.hpp"
-#include "Config.hpp"
+#include <LibLyketo/Proto.hpp>
+#include <LibLyketo/Config.hpp>
 #include "Utility.hpp"
 
 Proto::Proto() : m_dwFourCC(0), m_dwVersion(0), m_dwStride(0), m_dwElements(0), m_eType(ProtoType::MobProto), m_upObject(new CryptedObject())

@@ -2,8 +2,8 @@
 	@file CryptedObject.cpp
 	Implements a Crypted object format, used in raw EterPack and proto files.
 */
-#include "CryptedObject.hpp"
-#include "Config.hpp"
+#include <LibLyketo/CryptedObject.hpp>
+#include <LibLyketo/Config.hpp>
 #include "Utility.hpp"
 #include "xtea.hpp"
 
@@ -23,7 +23,7 @@ bool CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLength, const uint32
 
 	m_dwFourCC = Utility::FromByteArray(pbInput);
 
-	 ICompressAlgorithm* algorithm = Config::Instance()->CryptedObject()->FindAlgorithm(m_dwFourCC);
+	ICompressAlgorithm* algorithm = Config::Instance()->CryptedObject()->FindAlgorithm(m_dwFourCC);
 
 	if (!algorithm)
 		return false;
