@@ -44,7 +44,9 @@ public:
 
 protected:
 	bool Get(EterPackFile sInfo, std::vector<uint8_t>& vData);
+
 	bool DecryptType(std::vector<uint8_t> vInput, std::vector<uint8_t>& vOutput, uint8_t bType);
+	bool EncryptType(const uint8_t* pbInput, uint32_t dwInputLen, std::vector<uint8_t>& vOutput, uint8_t bType);
 
 	IFileSystem* m_pcFS;
 	std::map<uint32_t, EterPackFile> m_mFiles;

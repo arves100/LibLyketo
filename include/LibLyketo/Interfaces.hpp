@@ -62,4 +62,5 @@ public:
 	virtual bool Seek(size_t nLength, SeekOffset eOffset) { return false; }
 	virtual bool Read(uint8_t* pbOut, size_t nLength) { return false; }
 	virtual bool Write(const uint8_t* pbData, size_t nLength) { return false; }
+	virtual long Tell() { return 0; }
 };

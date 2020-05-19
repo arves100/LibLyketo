@@ -11,6 +11,7 @@
 #include <crc32/Crc32.h>
 #include "Utility.hpp"
 
+#include <time.h>
 #include <string.h>
 #include <algorithm>
 
@@ -143,7 +144,90 @@ bool EterPack::DecryptType(std::vector<uint8_t> vInput, std::vector<uint8_t>& vO
 			return false;
 
 		memcpy_s(vOutput.data(), vOutput.size(), vInput.data(), vInput.size());
+		return true;
 	}
 
 	return false;
+}
+
+bool EterPack::EncryptType(const uint8_t* pbInput, uint32_t dwInputLen, std::vector<uint8_t>& vOutput, uint8_t bType)
+{
+	if (bType == 0) // Raw
+	{
+		vOutput.resize(dwInputLen);
+		vOutput.reserve(dwInputLen);
+
+		memcpy_s(vOutput.data(), vOutput.size(), pbInput, dwInputLen);
+		return true;
+	}
+
+	return false;
+}
+
+bool EterPack::Save(std::vector<uint8_t>& vOutput)
+{
+	srand(static_cast<unsigned int>(time(0)));
+
+	vOutput.resize((192 * m_mFiles.size()) + 12);  // 192: EterPackFile, 12: EPKD header
+	vOutput.reserve((192 * m_mFiles.size()) + 12);
+	vOutput.clear();
+
+	auto it = m_mFiles.begin(), end = m_mFiles.end();
+	for (size_t i = m_mFiles.size(); i > 0; i--, it++)
+	{
+		if (it == end)
+			break;
+
+		auto info = it->second;
+
+		// 3 padding
+		vOutput.push_back(rand() & 0xFF);
+		vOutput.push_back(rand() & 0xFF);
+		vOutput.push_back(rand() & 0xFF);
+		vOutput.push_back(info.bType);
+
+		Utility::AddToVector<uint32_t, uint8_t>(info.dwPosition, vOutput);
+		Utility::AddToVector<uint32_t, uint8_t>(info.dwCRC32, vOutput);
+		Utility::AddToVector<uint32_t, uint8_t>(info.dwSize, vOutput);
+		Utility::AddToVector<uint32_t, uint8_t>(info.dwRealSize, vOutput);
+		Utility::AddToVector<uint32_t, uint8_t>(info.dwFilenameCRC32, vOutput);
+
+		// 3 padding
+		vOutput.push_back(rand() & 0xFF);
+		vOutput.push_back(rand() & 0xFF);
+		vOutput.push_back(rand() & 0xFF);
+
+		memcpy_s(vOutput.data() + 27, vOutput.size() - 27, info.szFilename, 161);
+
+		Utility::AddToVector<uint32_t, uint8_t>(info.dwId, vOutput);
+	}
+
+	Utility::AddToVector<uint32_t, uint8_t>(static_cast<uint32_t>(m_mFiles.size()), vOutput);
+	Utility::AddToVector<uint32_t, uint8_t>(Config::Instance()->EterPack().dwVersion, vOutput);
+	Utility::AddToVector<uint32_t, uint8_t>(Config::Instance()->EterPack().dwFourCC, vOutput);
+
+	return true;
+}
+
+bool EterPack::Put(std::string szFile, const uint8_t* pbContent, uint32_t dwContentLen, uint8_t bType)
+{
+	std::vector<uint8_t> data;
+	if (!EncryptType(pbContent, dwContentLen, data, bType))
+		return false;
+
+	EterPackFile epf;
+	epf.dwCRC32 = crc32_fast(szFile.c_str(), szFile.size());
+	epf.bType = bType;
+	epf.dwRealSize = dwContentLen;
+	epf.dwId = static_cast<uint32_t>(m_mFiles.size());
+	epf.dwSize = static_cast<uint32_t>(data.size());
+	strncpy_s(epf.szFilename, _countof(epf.szFilename), szFile.c_str(), 160);
+	epf.dwCRC32 = crc32_fast(data.data(), data.size());
+
+	m_pcFS->Write(data.data(), data.size());
+	epf.dwPosition = static_cast<uint32_t>(m_pcFS->Tell() - data.size());
+
+	m_mFiles[epf.dwCRC32] = epf;
+
+	return true;
 }
