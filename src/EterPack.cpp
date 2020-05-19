@@ -8,6 +8,7 @@
 
 #include <LibLyketo/EterPack.hpp>
 #include <LibLyketo/Config.hpp>
+#include <LibLyketo/CryptedObject.hpp>
 #include <crc32/Crc32.h>
 #include "Utility.hpp"
 
@@ -146,6 +147,19 @@ bool EterPack::DecryptType(std::vector<uint8_t> vInput, std::vector<uint8_t>& vO
 		memcpy_s(vOutput.data(), vOutput.size(), vInput.data(), vInput.size());
 		return true;
 	}
+	else if (bType == 2 || bType == 6) // LZO/Snappy + XTEA
+	{
+		CryptedObject obj;
+
+		if (!obj.Decrypt(vInput.data(), vInput.size(), Config::Instance()->EterPack().dwContentKeys))
+			return false;
+
+		if (obj.GetSize() != vOutput.size())
+			return false;
+
+		memcpy_s(vOutput.data(), vOutput.size(), obj.GetBuffer(), obj.GetSize());
+		return true;
+	}
 
 	return false;
 }
@@ -158,6 +172,42 @@ bool EterPack::EncryptType(const uint8_t* pbInput, uint32_t dwInputLen, std::vec
 		vOutput.reserve(dwInputLen);
 
 		memcpy_s(vOutput.data(), vOutput.size(), pbInput, dwInputLen);
+		return true;
+	}
+	else if (bType == 2) // LZO + XTEA
+	{
+		CryptedObject obj;
+
+		uint32_t dwOldFourCC;
+		Config::Instance()->CryptedObject()->GetForcedAlgorithmOrDefault(dwOldFourCC);
+
+		Config::Instance()->CryptedObject()->ForceAlgorithm(Utility::FromByteArray("MCOZ"));
+		if (!obj.Encrypt(pbInput, dwInputLen, Config::Instance()->EterPack().dwContentKeys))
+			return false;
+
+		Config::Instance()->CryptedObject()->ForceAlgorithm(dwOldFourCC);
+
+		vOutput.resize(obj.GetSize());
+		vOutput.reserve(obj.GetSize());
+		memcpy_s(vOutput.data(), vOutput.size(), obj.GetBuffer(), obj.GetSize());
+		return true;	
+	}
+	else if (bType == 6) // Snappy + XTEA
+	{
+		CryptedObject obj;
+
+		uint32_t dwOldFourCC;
+		Config::Instance()->CryptedObject()->GetForcedAlgorithmOrDefault(dwOldFourCC);
+
+		Config::Instance()->CryptedObject()->ForceAlgorithm(Utility::FromByteArray("MCSP"));
+		if (!obj.Encrypt(pbInput, dwInputLen, Config::Instance()->EterPack().dwContentKeys))
+			return false;
+
+		Config::Instance()->CryptedObject()->ForceAlgorithm(dwOldFourCC);
+
+		vOutput.resize(obj.GetSize());
+		vOutput.reserve(obj.GetSize());
+		memcpy_s(vOutput.data(), vOutput.size(), obj.GetBuffer(), obj.GetSize());
 		return true;
 	}
 

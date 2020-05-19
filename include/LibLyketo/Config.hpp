@@ -81,6 +81,7 @@ struct EterPackConfig
 {
 	uint32_t dwFourCC;
 	uint32_t dwVersion;
+	uint32_t dwContentKeys[4];
 
 	EterPackConfig();
 };
