@@ -13,18 +13,27 @@ set(SOURCES
 	src/Utility.hpp
 	src/xtea.cpp
 	src/xtea.hpp
+	src/EterPack.cpp
+	src/CompressAlgorithms.hpp
 )
 	
 set(INCLUDES
-	include/LibLyketo/CompressAlgorithms.hpp
 	include/LibLyketo/Config.hpp
 	include/LibLyketo/CryptedObject.hpp
 	include/LibLyketo/Proto.hpp
+	include/LibLyketo/EterPack.hpp
+	include/LibLyketo/Interfaces.hpp
+)
+
+set(EXTERNAL
+	ext/crc32/Crc32.h
+	ext/crc32/Crc32.cpp
 )
 
 source_group(LibLyketo FILES ${INCLUDES})
+source_group(External FILES ${EXTERNAL})
 
-add_library(${PROJECT_NAME} STATIC ${SOURCES} ${INCLUDES})
+add_library(${PROJECT_NAME} STATIC ${SOURCES} ${INCLUDES} ${EXTERNAL})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ext)

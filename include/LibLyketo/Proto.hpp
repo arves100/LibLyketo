@@ -4,9 +4,9 @@
 */
 #pragma once
 
-#include <stdint.h>
-
 #include "CryptedObject.hpp"
+
+#include <memory>
 
 enum class ProtoType
 {

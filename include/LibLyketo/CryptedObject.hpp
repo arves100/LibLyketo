@@ -4,9 +4,8 @@
 */
 #pragma once
 
-#include "CompressAlgorithms.hpp"
-#include <memory>
-#include <map>
+#include <stdint.h>
+
 #include <vector>
 
 /*!

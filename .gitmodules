@@ -1,3 +1,6 @@
 [submodule "ext/lzokay"]
 	path = ext/lzokay
 	url = https://github.com/jackoalan/lzokay
+[submodule "ext/crc32"]
+	path = ext/crc32
+	url = https://github.com/stbrumme/crc32

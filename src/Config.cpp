@@ -78,6 +78,12 @@ ProtoConfig::ProtoConfig() : dwItemVersion(1), dwItemFourCC(Utility::FromByteArr
 }
 // ------------------------------------------------------------------------------------------------------------------
 
+// EterPackConfig
+EterPackConfig::EterPackConfig() : dwFourCC(Utility::FromByteArray("EPKD")), dwVersion(2)
+{
+}
+// ------------------------------------------------------------------------------------------------------------------
+
 // Config
 Config::Config() : m_upCryptedConfig(new CryptedObjectConfig()), m_sProto()
 {

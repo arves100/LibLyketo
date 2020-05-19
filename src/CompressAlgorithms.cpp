@@ -1,4 +1,4 @@
-#include <LibLyketo/CompressAlgorithms.hpp>
+#include "CompressAlgorithms.hpp"
 #include <lzokay/lzokay.hpp>
 
 // LZO (MCOZ)
@@ -28,5 +28,29 @@ bool CompressAlgorithmLzo1x::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, 
 size_t CompressAlgorithmLzo1x::GetWrostSize(size_t dwOriginalSize)
 {
 	return lzokay::compress_worst_size(dwOriginalSize);
+}
+// ------------------------------------------------------------------------------------------------------------------
+
+// Snappy (MCPS)
+bool CompressAlgorithmSnappy::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
+{
+	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
+		return false;
+
+	return false; // @todo
+}
+
+bool CompressAlgorithmSnappy::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
+{
+	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
+		return false;
+
+	*pdwOutputLength = 0;
+	return false; // @todo
+}
+
+size_t CompressAlgorithmSnappy::GetWrostSize(size_t dwOriginalSize)
+{
+	return 0; // @todo
 }
 // ------------------------------------------------------------------------------------------------------------------

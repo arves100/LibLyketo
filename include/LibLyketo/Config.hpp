@@ -6,7 +6,6 @@
 
 #include "CompressAlgorithms.hpp"
 
-#include <stdint.h>
 #include <map>
 #include <memory>
 
@@ -75,6 +74,14 @@ struct ProtoConfig
 	ProtoConfig();
 };
 
+struct EterPackConfig
+{
+	uint32_t dwFourCC;
+	uint32_t dwVersion;
+
+	EterPackConfig();
+};
+
 class Config
 {
 public:
@@ -87,9 +94,12 @@ public:
 
 	struct ProtoConfig Proto() { return m_sProto; }
 
+	struct EterPackConfig EterPack() { return m_sEterpack; }
+
 private:
 	std::unique_ptr<CryptedObjectConfig> m_upCryptedConfig;
 	struct ProtoConfig m_sProto;
+	struct EterPackConfig m_sEterpack;
 
 	static Config* m_pInstance;
 };

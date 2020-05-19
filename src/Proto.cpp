@@ -45,9 +45,9 @@ bool Proto::Decrypt(const uint8_t* pbInput, size_t nLength, const uint32_t adwKe
 		nOffset += 8;
 	}
 	else if (m_dwFourCC == sProto.dwItemFourCCOld)
-		m_eType == ProtoType::ItemProto_Old;
+		m_eType = ProtoType::ItemProto_Old;
 	else if (m_dwFourCC == sProto.dwMobFourCC)
-		m_eType == ProtoType::MobProto;
+		m_eType = ProtoType::MobProto;
 	else
 		return false; // Unsupported FourCC
 	
@@ -78,7 +78,7 @@ bool Proto::Encrypt(const uint8_t* pbInput, size_t nLength, uint32_t dwElements,
 		m_dwFourCC = sProto.dwItemFourCCOld;	
 	else if (eType == ProtoType::ItemProto)
 	{
-		m_dwFourCC == sProto.dwItemFourCC;
+		m_dwFourCC = sProto.dwItemFourCC;
 		m_dwStride = sProto.dwItemStride;
 		m_dwVersion = sProto.dwItemVersion;
 	}
