@@ -4,6 +4,7 @@
 
 #include "CompressAlgorithms.hpp"
 #include <lzokay/lzokay.hpp>
+#include <snappy.h>
 
 // LZO (MCOZ)
 bool CompressAlgorithmLzo1x::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
@@ -41,7 +42,14 @@ bool CompressAlgorithmSnappy::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput,
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
 		return false;
 
-	return false; // @todo
+	std::string szUncompress;
+	
+	if (!snappy::Compress(reinterpret_cast<const char*>(pbInput), dwInputLength, &szUncompress))
+		return false;
+
+	memcpy_s(pbOutput, *pdwOutputLength, szUncompress.data(), szUncompress.size());
+	*pdwOutputLength = static_cast<uint32_t>(szUncompress.size());
+	return true;
 }
 
 bool CompressAlgorithmSnappy::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
@@ -49,12 +57,18 @@ bool CompressAlgorithmSnappy::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput,
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
 		return false;
 
-	*pdwOutputLength = 0;
-	return false; // @todo
+	std::string szUncompress;
+	
+	if (!snappy::Uncompress(reinterpret_cast<const char*>(pbInput), dwInputLength, &szUncompress))
+		return false;
+
+	memcpy_s(pbOutput, *pdwOutputLength, szUncompress.data(), szUncompress.size());
+	*pdwOutputLength = static_cast<uint32_t>(szUncompress.size());
+	return true;
 }
 
 size_t CompressAlgorithmSnappy::GetWrostSize(size_t dwOriginalSize)
 {
-	return 0; // @todo
+	return snappy::MaxCompressedLength(dwOriginalSize);
 }
 // ------------------------------------------------------------------------------------------------------------------

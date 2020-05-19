@@ -13,7 +13,7 @@ CryptedObjectConfig::CryptedObjectConfig() : m_dwForcedAlgorithm(0)
 {
 	// Default algorithms
 	m_mAlgorithms[Utility::FromByteArray("MCOZ")] = std::make_unique<CompressAlgorithmLzo1x>();
-	//m_mAlgorithms[Utility::FromByteArray("MCSP")] = std::make_unique<CompressAlgorithmSnappy>();
+	m_mAlgorithms[Utility::FromByteArray("MCSP")] = std::make_unique<CompressAlgorithmSnappy>();
 }
 
 CryptedObjectConfig::~CryptedObjectConfig()

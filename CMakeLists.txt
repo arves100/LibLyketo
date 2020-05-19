@@ -7,6 +7,7 @@ cmake_minimum_required(VERSION 3.3)
 project(LibLyketo)
 
 add_subdirectory(ext)
+find_package(Snappy CONFIG REQUIRED)
 
 option(LIBLYKETO_ENABLE_TESTAPP "Build LyketoCLI Tool" ON)
 
@@ -43,7 +44,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES} ${INCLUDES} ${EXTERNAL})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ext)
 target_link_libraries(${PROJECT_NAME} PRIVATE lzokay)
-
+target_link_libraries(${PROJECT_NAME} PRIVATE Snappy::snappy)
 
 if (LIBLYKETO_ENABLE_TESTAPP)
 	add_subdirectory(testapp)
