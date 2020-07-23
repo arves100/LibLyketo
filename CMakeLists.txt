@@ -6,29 +6,40 @@
 cmake_minimum_required(VERSION 3.3)
 project(LibLyketo)
 
+option(LIBLYKETO_ENABLE_TESTAPP "Build LyketoCLI Tool" ON)
+
+if (MSVC)
+	option(STATIC_CRT "Use Visual C++ static CRT" OFF)
+
+	if(STATIC_CRT)
+		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+	endif()
+endif()
+
 add_subdirectory(ext)
 find_package(Snappy CONFIG REQUIRED)
 
-option(LIBLYKETO_ENABLE_TESTAPP "Build LyketoCLI Tool" ON)
+
 
 set(SOURCES
-	src/CompressAlgorithms.cpp
-	src/Config.cpp
+	src/DefaultAlgorithms.cpp
 	src/CryptedObject.cpp
 	src/Proto.cpp
 	src/Utility.hpp
 	src/xtea.cpp
 	src/xtea.hpp
 	src/EterPack.cpp
-	src/CompressAlgorithms.hpp
+	
 )
 	
 set(INCLUDES
-	include/LibLyketo/Config.hpp
 	include/LibLyketo/CryptedObject.hpp
 	include/LibLyketo/Proto.hpp
 	include/LibLyketo/EterPack.hpp
-	include/LibLyketo/Interfaces.hpp
+	include/LibLyketo/IFileSystem.hpp
+	include/LibLyketo/ICryptedObjectAlgorithm.hpp
+	include/LibLyketo/DefaultAlgorithms.hpp
 )
 
 set(EXTERNAL

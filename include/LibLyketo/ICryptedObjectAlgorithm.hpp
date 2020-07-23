@@ -1,6 +1,14 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
+﻿/* Copyright © 2020 Arves100
+
+   This Source Code Form is subject to the terms of the Mozilla Public
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+/*!
+	@file CryptedObjectAlgorithm.hpp
+	Definition of a generic crypted object algorithm.
+*/
+#ifndef CRYPTEDOBJECTALGORITHM_HPP
+#define CRYPTEDOBJECTALGORITHM_HPP
 #pragma once
 
 #include <stdint.h>
@@ -8,11 +16,11 @@
 /*!
 	A generic interface for implementing different compression algorithm used in the CryptedObject format.
 */
-class ICompressAlgorithm
+class ICryptedObjectAlgorithm
 {
 public:
 	/*!
-		Encrypts a pack of data.
+		Compress a pack of data.
 
 		pbOutput's memory is not managed by this function, make sure to allocate it by using @ref GetWrostSize and free the memory of it.
 
@@ -22,10 +30,10 @@ public:
 		@param pdwOutputLength The resulted size of the output buffer.
 		@return true if the decryptation succeeded, otherwise false.
 	*/
-	virtual bool Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) = 0 {}
+	virtual bool Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) = 0 { return false; }
 
 	/*!
-		Decrypts a pack of data.
+		Decompress a pack of data.
 
 		pbOutput's memory is not managed by this function, make sure to allocate it and free the memory of it.
 
@@ -35,7 +43,7 @@ public:
 		@param pdwOutputLength The resulted size of the output buffer.
 		@return true if the decryptation succeeded, otherwise false
 	*/
-	virtual bool Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) = 0 {}
+	virtual bool Decompress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) = 0 { return false; }
 
 	/*!
 		Gets the maximum size that could be achieved by encrypting with the selected algorithm.
@@ -44,23 +52,14 @@ public:
 		@return The wrost achievable length with encrypting with this algorithm.
 	*/
 	virtual size_t GetWrostSize(size_t dwOriginalSize) = 0 { return 0; }
+
+	virtual void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) = 0 {}
+
+	virtual uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) = 0 { return 0; }
+
+	virtual uint32_t GetFourCC() = 0 { return 0; }
+
+	virtual bool HaveCryptation() = 0 { return false; }
 };
 
-enum class SeekOffset
-{
-	Start,
-	End,
-	Current,
-};
-
-class IFileSystem
-{
-public:
-	IFileSystem() {}
-	virtual ~IFileSystem() {}
-
-	virtual bool Seek(size_t nLength, SeekOffset eOffset) { return false; }
-	virtual bool Read(uint8_t* pbOut, size_t nLength) { return false; }
-	virtual bool Write(const uint8_t* pbData, size_t nLength) { return false; }
-	virtual long Tell() { return 0; }
-};
+#endif // CRYPTEDOBJECTALGORITHM_HPP

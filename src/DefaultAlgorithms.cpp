@@ -1,13 +1,21 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+   /*!
+	   @file DefaultAlgorithms.cpp
+	   Implementation of the default algorithms that works with a CryptedObject.
+   */
+#include "xtea.hpp"
 
-#include "CompressAlgorithms.hpp"
+#include <LibLyketo/DefaultAlgorithms.hpp>
+
 #include <lzokay/lzokay.hpp>
 #include <snappy.h>
 
+#define MAKEFOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
+
 // LZO (MCOZ)
-bool CompressAlgorithmLzo1x::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
+bool DefaultAlgorithmLzo1x::Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
 {
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
 		return false;
@@ -18,7 +26,7 @@ bool CompressAlgorithmLzo1x::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, 
 	return r == lzokay::EResult::Success;
 }
 
-bool CompressAlgorithmLzo1x::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
+bool DefaultAlgorithmLzo1x::Decompress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
 {
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
 		return false;
@@ -30,14 +38,35 @@ bool CompressAlgorithmLzo1x::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, 
 	return r == lzokay::EResult::Success;
 }
 
-size_t CompressAlgorithmLzo1x::GetWrostSize(size_t dwOriginalSize)
+size_t DefaultAlgorithmLzo1x::GetWrostSize(size_t dwOriginalSize)
 {
 	return lzokay::compress_worst_size(dwOriginalSize);
 }
+
+bool DefaultAlgorithmLzo1x::HaveCryptation()
+{
+	return true;
+}
+
+uint32_t DefaultAlgorithmLzo1x::Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key)
+{
+	return XTEA::Decrypt(input, output, size, key, 32);
+}
+
+void DefaultAlgorithmLzo1x::Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key)
+{
+	return XTEA::Encrypt(input, output, size, key, 32);
+}
+
+uint32_t DefaultAlgorithmLzo1x::GetFourCC()
+{
+	return MAKEFOURCC('M', 'C', 'O', 'Z');
+}
+
 // ------------------------------------------------------------------------------------------------------------------
 
 // Snappy (MCPS)
-bool CompressAlgorithmSnappy::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
+bool DefaultAlgorithmSnappy::Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
 {
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
 		return false;
@@ -52,7 +81,7 @@ bool CompressAlgorithmSnappy::Encrypt(const uint8_t* pbInput, uint8_t* pbOutput,
 	return true;
 }
 
-bool CompressAlgorithmSnappy::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
+bool DefaultAlgorithmSnappy::Decompress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
 {
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
 		return false;
@@ -67,8 +96,29 @@ bool CompressAlgorithmSnappy::Decrypt(const uint8_t* pbInput, uint8_t* pbOutput,
 	return true;
 }
 
-size_t CompressAlgorithmSnappy::GetWrostSize(size_t dwOriginalSize)
+size_t DefaultAlgorithmSnappy::GetWrostSize(size_t dwOriginalSize)
 {
 	return snappy::MaxCompressedLength(dwOriginalSize);
 }
+
+uint32_t DefaultAlgorithmSnappy::Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key)
+{
+	return XTEA::Decrypt(input, output, size, key, 32);
+}
+
+void DefaultAlgorithmSnappy::Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key)
+{
+	return XTEA::Encrypt(input, output, size, key, 32);
+}
+
+bool DefaultAlgorithmSnappy::HaveCryptation()
+{
+	return true;
+}
+
+uint32_t DefaultAlgorithmSnappy::GetFourCC()
+{
+	return MAKEFOURCC('M', 'C', 'S', 'P');
+}
+
 // ------------------------------------------------------------------------------------------------------------------

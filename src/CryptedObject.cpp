@@ -1,4 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
+﻿/* Copyright © 2020 Arves100
+
+   This Source Code Form is subject to the terms of the Mozilla Public
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /*!
@@ -6,164 +8,245 @@
 	Implements a Crypted object format, used in raw EterPack and proto files.
 */
 #include <LibLyketo/CryptedObject.hpp>
-#include <LibLyketo/Config.hpp>
-#include "Utility.hpp"
-#include "xtea.hpp"
 
-CryptedObject::CryptedObject() : m_dwFourCC(0), m_dwAfterCryptLength(0), m_dwAfterCompressLength(0), m_dwRealLength(0)
+#include <string.h>
+
+CryptedObjectHeader::CryptedObjectHeader() : dwFourCC(0), dwAfterCryptLength(0), dwAfterCompressLength(0), dwRealLength(0) {}
+
+CryptedObject::CryptedObject() : m_sHeader(), m_pAlgorithm(nullptr), m_pBuffer(nullptr), m_nBufferLen(0)
 {
+	memset(m_adwKeys, 0, sizeof(m_adwKeys));
 }
 
 CryptedObject::~CryptedObject()
 {
+	if (m_pBuffer)
+		delete[] m_pBuffer;
 
+	m_pBuffer = nullptr;
+	m_pAlgorithm = nullptr;
 }
 
-bool CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLength, const uint32_t adwKeys[])
+void CryptedObject::SetAlgorithm(ICryptedObjectAlgorithm* pAlgorithm)
 {
-	if (!pbInput || !adwKeys || nLength < 20)
-		return false;
+	m_pAlgorithm = pAlgorithm;
+}
 
-	m_dwFourCC = Utility::FromByteArray(pbInput);
+void CryptedObject::SetKeys(const uint32_t* adwKeys)
+{
+	memcpy_s(m_adwKeys, sizeof(m_adwKeys), adwKeys, 16);
+}
 
-	ICompressAlgorithm* algorithm = Config::Instance()->CryptedObject()->FindAlgorithm(m_dwFourCC);
+CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLength)
+{
+	if (!pbInput || nLength < (sizeof(struct CryptedObjectHeader) + sizeof(uint32_t)))
+		return CryptedObjectErrors::InvalidInput;
 
-	if (!algorithm)
-		return false;
+	if (!m_pAlgorithm)
+		return CryptedObjectErrors::InvalidAlgorithm;
 
-	m_dwAfterCryptLength = Utility::FromByteArray(pbInput + 4);
-	m_dwAfterCompressLength = Utility::FromByteArray(pbInput + 8);
-	m_dwRealLength = Utility::FromByteArray(pbInput + 12);
-	std::vector<uint8_t> data;
+	if (m_pBuffer)
+		delete[] m_pBuffer;
 
-	if (m_dwRealLength < 1)
+	m_pBuffer = nullptr;
+
+	m_sHeader = *(struct CryptedObjectHeader*)(pbInput);
+
+	uint8_t* pData = nullptr;
+
+	if (m_sHeader.dwRealLength < 1 || m_sHeader.dwFourCC != m_pAlgorithm->GetFourCC())
 	{
-		return false;
+		return CryptedObjectErrors::InvalidHeader;
 	}
 
 	// 1. Decrypt the data
-	if (m_dwAfterCryptLength > 0)
+	if (m_sHeader.dwAfterCryptLength > 0)
 	{
-		if ((nLength - 20) != m_dwAfterCryptLength)
+		if ((nLength - sizeof(struct CryptedObjectHeader) - sizeof(uint32_t)) != m_sHeader.dwAfterCryptLength) // Header + fourcc
 		{
-			return false;
+			return CryptedObjectErrors::InvalidCryptLength;
 		}
 		
-		data.resize(m_dwAfterCompressLength + 20); // +19 -.-''
-		data.reserve(m_dwAfterCompressLength + 20);
+		pData = new uint8_t[m_sHeader.dwAfterCompressLength + 20]; // +20 -.-''
 
-		XTEA::Decrypt(pbInput + 16, data.data(), m_dwAfterCryptLength, adwKeys, 32);
-
-		if (Utility::FromByteArray(data.data()) != m_dwFourCC) // Verify decryptation
+		if (!pData)
 		{
-			return false;
+			return CryptedObjectErrors::NoMemory;
+		}
+
+		m_pAlgorithm->Decrypt(pbInput + sizeof(struct CryptedObjectHeader), pData, m_sHeader.dwAfterCryptLength, m_adwKeys);
+
+		if (*reinterpret_cast<uint32_t*>(pData) != m_sHeader.dwFourCC) // Verify decryptation
+		{
+			delete[] pData;
+			return CryptedObjectErrors::CryptFail;
 		}
 	}
 
 	// 2. Decompress the data
-	if (m_dwAfterCompressLength > 0)
+	if (m_sHeader.dwAfterCompressLength > 0)
 	{
-		const uint8_t* inputData;
-
-		if (m_dwAfterCryptLength < 1) // Data is not encrypted
+		if (!m_pAlgorithm->HaveCryptation())
 		{
-			if ((nLength - 16) != m_dwAfterCompressLength)
-				return false;
+			if (pData)
+				delete[] pData;
 
-			data.resize(m_dwAfterCompressLength);
-			data.reserve(m_dwAfterCompressLength);
-			memcpy_s(data.data(), m_dwAfterCompressLength, pbInput + 16, m_dwAfterCompressLength);
-
-			inputData = data.data();
-		}
-		else
-		{
-			inputData = data.data() + 4;
+			return CryptedObjectErrors::InvalidCryptAlgorithm;
 		}
 
-		m_vBuffer.resize(m_dwRealLength);
-		m_vBuffer.reserve(m_dwRealLength);
+		const uint8_t* inputData = nullptr;
 
-		size_t nRealLength = m_dwRealLength;
-		if (!algorithm->Decrypt(inputData, m_vBuffer.data(), m_dwAfterCompressLength, &nRealLength))
+		if (m_sHeader.dwAfterCryptLength < 1) // Data is not encrypted
 		{
-			return false;
+			if (pData)
+				delete[] pData;
+
+			if ((nLength - sizeof(struct CryptedObjectHeader)) != m_sHeader.dwAfterCompressLength)
+				return CryptedObjectErrors::InvalidCompressLength;
+
+			pData = new uint8_t[m_sHeader.dwAfterCompressLength + sizeof(uint32_t)];
+
+			if (!pData)
+				return CryptedObjectErrors::NoMemory;
+
+			memcpy_s(pData, m_sHeader.dwAfterCompressLength, pbInput + sizeof(struct CryptedObjectHeader), m_sHeader.dwAfterCompressLength);
+
+			if (*reinterpret_cast<uint32_t*>(pData) != m_sHeader.dwFourCC) // Verify decryptation
+			{
+				delete[] pData;
+				return CryptedObjectErrors::InvalidFourCC;
+			}
 		}
 
-		if (nRealLength != m_dwRealLength)
+		inputData = pData + sizeof(uint32_t);
+
+		m_nBufferLen = m_sHeader.dwRealLength;
+		m_pBuffer = new uint8_t[m_nBufferLen];
+
+		size_t nRealLength = m_sHeader.dwRealLength;
+		if (!m_pAlgorithm->Decompress(inputData, m_pBuffer, m_sHeader.dwAfterCompressLength, &nRealLength))
 		{
-			return false;
+			delete[] pData;
+			return CryptedObjectErrors::CompressFail;
+		}
+
+		if (nRealLength != m_sHeader.dwRealLength)
+		{
+			delete[] pData;
+			return CryptedObjectErrors::InvalidRealLength;
 		}
 	}
 	else
 	{
-		if (m_dwAfterCompressLength > 0)
+		if (m_sHeader.dwAfterCompressLength > 0)
 		{
-			return true;
+			if (pData)
+				delete[] pData;
+
+			return CryptedObjectErrors::Ok;
 		}
 
 		// Data is not compressed at all
 
-		size_t nRealDataLenCalculated = nLength - 16;
+		size_t nRealDataLenCalculated = nLength - sizeof(struct CryptedObjectHeader);
 
-		if (nRealDataLenCalculated != m_dwRealLength)
-			return false;
+		if (nRealDataLenCalculated != m_sHeader.dwRealLength)
+		{
+			if (pData)
+				delete[] pData;
 
-		m_vBuffer.resize(nRealDataLenCalculated);
-		m_vBuffer.reserve(nRealDataLenCalculated);
-		memcpy_s(m_vBuffer.data(), nRealDataLenCalculated, pbInput + 16, nRealDataLenCalculated);
+			return CryptedObjectErrors::InvalidRealLength;
+		}
+
+		m_nBufferLen = nRealDataLenCalculated;
+		m_pBuffer = new uint8_t[m_nBufferLen];
+
+		memcpy_s(m_pBuffer, m_nBufferLen, pbInput + sizeof(struct CryptedObjectHeader), m_nBufferLen);
 	}
 
-	return true;
+	if (pData)
+		delete[] pData;
+
+	return CryptedObjectErrors::Ok;
 }
 
-bool CryptedObject::Encrypt(const uint8_t* pbInput, size_t nLength, const uint32_t adwKeys[])
+CryptedObjectErrors CryptedObject::Encrypt(const uint8_t* pbInput, size_t nLength, bool bEncrypt)
 {
-	if (!pbInput || !adwKeys || nLength < 1)
-		return false;
+	// §NOTE: No support for uncompressed crypted objects
 
-	ICompressAlgorithm* algorithm = Config::Instance()->CryptedObject()->GetForcedAlgorithmOrDefault(m_dwFourCC);
+	if (!pbInput || nLength < 1)
+		return CryptedObjectErrors::InvalidInput;
 
-	if (!algorithm)
-		return false;
 
-	m_dwRealLength = static_cast<uint32_t>(nLength);
+	if (m_pBuffer)
+		delete[] m_pBuffer;
 
-	size_t nCompressedSize = algorithm->GetWrostSize(nLength);
+	m_pBuffer = nullptr;
 
-	std::vector<uint8_t> data;
-	data.reserve(nCompressedSize);
-	data.resize(nCompressedSize);
+	m_sHeader.dwFourCC = m_pAlgorithm->GetFourCC();
+	m_sHeader.dwRealLength = static_cast<uint32_t>(nLength);
 
-	// 1. Compress the data
-	if (!algorithm->Encrypt(pbInput, data.data(), nLength, &nCompressedSize))
+	size_t nCompressedSize = m_pAlgorithm->GetWrostSize(nLength);
+
+	uint8_t* pData = new uint8_t[nCompressedSize + sizeof(uint32_t)];
+
+	if (!pData)
 	{
-		return false;
+		return CryptedObjectErrors::NoMemory;
 	}
 
-	m_dwAfterCompressLength = static_cast<uint32_t>(nCompressedSize);
+	// 1. Compress the data
+	if (!m_pAlgorithm->Compress(pbInput, pData, nLength, &nCompressedSize))
+	{
+		delete[] pData;
+		return CryptedObjectErrors::CompressFail;
+	}
 
-	// 2. Append encrypt FourCC
-	data.resize(data.size());
-	data.reserve(data.size());
+	m_sHeader.dwAfterCompressLength = static_cast<uint32_t>(nCompressedSize);
 
-	Utility::AddToVector<uint32_t, uint8_t>(m_dwFourCC, data);
+	memcpy_s(pData + sizeof(uint32_t), nCompressedSize, pData, nCompressedSize);
+	uint32_t* pnFourCC = reinterpret_cast<uint32_t*>(pData);
+	*pnFourCC = m_sHeader.dwFourCC;
 
 	// 3. Encrypt data
-	m_dwAfterCryptLength = m_dwAfterCompressLength + 20;
-	m_vBuffer.reserve(m_dwAfterCryptLength);
-	m_vBuffer.resize(m_dwAfterCryptLength);
+	if (bEncrypt && m_pAlgorithm->HaveCryptation())
+	{
+		m_sHeader.dwAfterCryptLength = m_sHeader.dwAfterCompressLength + 20;
+		m_nBufferLen = m_sHeader.dwAfterCryptLength + sizeof(struct CryptedObjectHeader);
+		m_pBuffer = new uint8_t[m_nBufferLen];
 
-	XTEA::Encrypt(data.data(), m_vBuffer.data(), m_dwAfterCryptLength, adwKeys, 32);
+		if (!m_pBuffer)
+		{
+			delete[] pData;
+			return CryptedObjectErrors::NoMemory;
+		}
+
+		m_pAlgorithm->Encrypt(pData, m_pBuffer + sizeof(struct CryptedObjectHeader), m_sHeader.dwAfterCryptLength, m_adwKeys);
+	}
+	else
+	{
+		m_sHeader.dwAfterCryptLength = 0;
+		m_nBufferLen = m_sHeader.dwAfterCompressLength + sizeof(struct CryptedObjectHeader);
+		m_pBuffer = new uint8_t[m_nBufferLen];
+
+		if (!m_pBuffer)
+		{
+			delete[] pData;
+			return CryptedObjectErrors::NoMemory;
+		}
+
+		memcpy_s(m_pBuffer + sizeof(struct CryptedObjectHeader), m_nBufferLen - sizeof(struct CryptedObjectHeader), pData, nCompressedSize + sizeof(uint32_t));
+	}
+
 
 	// 4. Store header
-	m_vBuffer.reserve(m_dwAfterCryptLength);
-	m_vBuffer.resize(m_dwAfterCryptLength);
+	struct CryptedObjectHeader* pHeader = reinterpret_cast<struct CryptedObjectHeader*>(m_pBuffer);
+	pHeader->dwAfterCompressLength = m_sHeader.dwAfterCompressLength;
+	pHeader->dwAfterCryptLength = m_sHeader.dwAfterCryptLength;
+	pHeader->dwFourCC = m_sHeader.dwFourCC;
+	pHeader->dwRealLength = m_sHeader.dwRealLength;
 
-	Utility::AddToVector<uint32_t, uint8_t>(m_dwRealLength, data);
-	Utility::AddToVector<uint32_t, uint8_t>(m_dwAfterCompressLength, data);
-	Utility::AddToVector<uint32_t, uint8_t>(m_dwAfterCryptLength, data);
-	Utility::AddToVector<uint32_t, uint8_t>(m_dwFourCC, data);
+	delete[] pData;
 
-	return true; 
+	return CryptedObjectErrors::Ok;
 }

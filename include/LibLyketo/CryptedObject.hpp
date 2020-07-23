@@ -1,15 +1,17 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
+﻿/* Copyright © 2020 Arves100
+
+   This Source Code Form is subject to the terms of the Mozilla Public
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /*!
 	@file CryptedObject.hpp
 	Defines a Crypted object format, used in raw EterPack and proto files.
 */
+#ifndef CRYPTEDOBJECT_HPP
+#define CRYPTEDOBJECT_HPP
 #pragma once
 
-#include <stdint.h>
-
-#include <vector>
+#include "ICryptedObjectAlgorithm.hpp"
 
 /*!
 	A definition of a CryptedObject.
@@ -23,23 +25,58 @@
 
 		Data content
 */
+struct CryptedObjectHeader
+{
+	uint32_t dwFourCC;
+	uint32_t dwAfterCryptLength;
+	uint32_t dwAfterCompressLength;
+	uint32_t dwRealLength;
+
+	CryptedObjectHeader();
+};
+
+enum class CryptedObjectErrors
+{
+	Ok,
+	NoMemory,
+	InvalidInput,
+	InvalidAlgorithm,
+	InvalidHeader,
+	InvalidCompressLength,
+	InvalidRealLength,
+	InvalidCryptLength,
+	CryptFail,
+	InvalidCryptAlgorithm,
+	CompressFail,
+	InvalidFourCC
+};
+
 class CryptedObject
 {
 public:
 	CryptedObject();
 	virtual ~CryptedObject();
 
-	bool Decrypt(const uint8_t* pbInput, size_t nLength, const uint32_t adwKeys[]);
-	bool Encrypt(const uint8_t* pbInput, size_t nLength, const uint32_t adwKeys[]);
+	CryptedObjectErrors Decrypt(const uint8_t* pbInput, size_t nLength);
+	CryptedObjectErrors Encrypt(const uint8_t* pbInput, size_t nLength, bool bEncrypt = true);
 	
-	const uint8_t* GetBuffer() { return m_vBuffer.data(); }
-	size_t GetSize() { return m_vBuffer.size(); }
+	const uint8_t* GetBuffer() const { return m_pBuffer; }
+	size_t GetSize() const { return m_nBufferLen; }
+
+	void SetKeys(const uint32_t* adwKeys);
+	void SetAlgorithm(ICryptedObjectAlgorithm* pAlgorithm);
+
+	const uint32_t* GetKeys() const { return m_adwKeys; }
+	ICryptedObjectAlgorithm* GetAlgorithm() const { return m_pAlgorithm; }
 
 private:
-	uint32_t m_dwFourCC;
-	uint32_t m_dwAfterCryptLength;
-	uint32_t m_dwAfterCompressLength;
-	uint32_t m_dwRealLength;
+	struct CryptedObjectHeader m_sHeader;
+	
+	uint32_t m_adwKeys[4];
+	ICryptedObjectAlgorithm* m_pAlgorithm;
 
-	std::vector<uint8_t> m_vBuffer;
+	uint8_t* m_pBuffer;
+	size_t m_nBufferLen;
 };
+
+#endif // CRYPTEDOBJECT_HPP

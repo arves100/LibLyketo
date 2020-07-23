@@ -2,21 +2,23 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /*!
-	@file CompressAlgorithms.hpp
-	Definition of multiple algorithms that works with a CryptedObject.
+	@file DefaultAlgorithms.hpp
+	Definition of the default algorithms that works with a CryptedObject.
 */
+#ifndef DEFAULTALGORITHMS_HPP
+#define DEFAULTALGORITHMS_HPP
 #pragma once
 
-#include <LibLyketo/Interfaces.hpp>
+#include <LibLyketo/ICryptedObjectAlgorithm.hpp>
 
 /*!
 	Implementation of ICompressAlgorithm with Lzo1x
 */
-class CompressAlgorithmLzo1x : public ICompressAlgorithm
+class DefaultAlgorithmLzo1x : public ICryptedObjectAlgorithm
 {
 public:
 	/*!
-		Encrypts a pack of data.
+		Compress a pack of data.
 
 		pbOutput's memory is not managed by this function, make sure to allocate it by using @ref GetWrostSize and free the memory of it.
 		Make sure to set pdwOutputLength content to the size of the pbOutput buffer otherwise the function will fail.
@@ -27,10 +29,10 @@ public:
 		@param pdwOutputLength The resulted size of the output buffer.
 		@return true if the decryptation succeeded, otherwise false.
 	*/
-	bool Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
+	bool Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
 
 	/*!
-		Decrypts a pack of data.
+		Decompress a pack of data.
 
 		pbOutput's memory is not managed by this function, make sure to allocate it and free the memory of it.
 		Make sure to set pdwOutputLength content to the size of the pbOutput buffer otherwise the function will fail.
@@ -41,7 +43,7 @@ public:
 		@param pdwOutputLength The resulted size of the output buffer.
 		@return true if the decryptation succeeded, otherwise false
 	*/
-	bool Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
+	bool Decompress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
 
 	/*!
 		Gets the maximum size that could be achieved by encrypting with the selected algorithm.
@@ -50,17 +52,22 @@ public:
 		@return The wrost achievable length with encrypting with this algorithm.
 	*/
 	size_t GetWrostSize(size_t dwOriginalSize) override;
+
+	uint32_t GetFourCC() override;
+	bool HaveCryptation() override;
+	uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
+	void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 };
 
 
 /*!
 	Implementation of ICompressAlgorithm with Snappy
 */
-class CompressAlgorithmSnappy : public ICompressAlgorithm
+class DefaultAlgorithmSnappy : public ICryptedObjectAlgorithm
 {
 public:
 	/*!
-		Encrypts a pack of data.
+		Compress a pack of data.
 
 		pbOutput's memory is not managed by this function, make sure to allocate it by using @ref GetWrostSize and free the memory of it.
 		Make sure to set pdwOutputLength content to the size of the pbOutput buffer otherwise the function will fail.
@@ -71,10 +78,10 @@ public:
 		@param pdwOutputLength The resulted size of the output buffer.
 		@return true if the decryptation succeeded, otherwise false.
 	*/
-	bool Encrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
+	bool Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
 
 	/*!
-		Decrypts a pack of data.
+		Decompress a pack of data.
 
 		pbOutput's memory is not managed by this function, make sure to allocate it and free the memory of it.
 		Make sure to set pdwOutputLength content to the size of the pbOutput buffer otherwise the function will fail.
@@ -85,7 +92,7 @@ public:
 		@param pdwOutputLength The resulted size of the output buffer.
 		@return true if the decryptation succeeded, otherwise false
 	*/
-	bool Decrypt(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
+	bool Decompress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength) override;
 
 	/*!
 		Gets the maximum size that could be achieved by encrypting with the selected algorithm.
@@ -94,4 +101,11 @@ public:
 		@return The wrost achievable length with encrypting with this algorithm.
 	*/
 	size_t GetWrostSize(size_t dwOriginalSize) override;
+
+	uint32_t GetFourCC() override;
+	bool HaveCryptation() override;
+	uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
+	void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 };
+
+#endif // DEFAULTALGORITHMS_HPP
