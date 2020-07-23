@@ -122,3 +122,27 @@ uint32_t DefaultAlgorithmSnappy::GetFourCC()
 }
 
 // ------------------------------------------------------------------------------------------------------------------
+
+namespace DefaultAlgorithms
+{
+	ICryptedObjectAlgorithm* GetDefaultAlgorithm(uint32_t dwFourCC)
+	{
+		switch (dwFourCC)
+		{
+		case MAKEFOURCC('M', 'C', 'S', 'P'):
+			return new DefaultAlgorithmSnappy();
+		case MAKEFOURCC('M', 'C', 'O', 'Z'):
+			return new DefaultAlgorithmLzo1x();
+		default:
+			break;
+		}
+
+		return nullptr;
+	}
+
+	uint32_t GetFourCC(const uint8_t* pInput)
+	{
+		const uint32_t* pdwFourCC = reinterpret_cast<const uint32_t*>(pInput);
+		return *pdwFourCC;
+	}
+}

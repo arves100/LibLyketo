@@ -29,12 +29,19 @@ int main(int argc, char* argv[])
 
 	obj.SetKeys((uint32_t*)ik);
 
-	ICryptedObjectAlgorithm* alg = new DefaultAlgorithmSnappy();
+	ICryptedObjectAlgorithm* alg = DefaultAlgorithms::GetDefaultAlgorithm(DefaultAlgorithms::GetFourCC(b));
+
+	if (!alg)
+	{
+		printf("Invalid FourCC\n");
+		delete[] b;
+	}
 
 	obj.SetAlgorithm(alg);
 
 	if (obj.Decrypt(b, fz) != CryptedObjectErrors::Ok)
 	{
+		delete[] b;
 		delete alg;
 		printf("CObj decrypt fail\n");
 		return 0;
@@ -42,6 +49,7 @@ int main(int argc, char* argv[])
 
 	printf("Cobj decrypt ok\n");
 
+	delete[] b;
 	delete alg;
 
 	printf("Start write -> %s\n", argv[2]);

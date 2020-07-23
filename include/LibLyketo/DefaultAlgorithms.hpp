@@ -54,7 +54,9 @@ public:
 	size_t GetWrostSize(size_t dwOriginalSize) override;
 
 	uint32_t GetFourCC() override;
+
 	bool HaveCryptation() override;
+
 	uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 	void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 };
@@ -107,5 +109,11 @@ public:
 	uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 	void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 };
+
+namespace DefaultAlgorithms
+{
+	ICryptedObjectAlgorithm* GetDefaultAlgorithm(uint32_t dwFourCC);
+	uint32_t GetFourCC(const uint8_t* pInput);
+}
 
 #endif // DEFAULTALGORITHMS_HPP
