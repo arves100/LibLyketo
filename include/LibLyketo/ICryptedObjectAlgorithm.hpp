@@ -14,11 +14,13 @@
 #include <stdint.h>
 
 /*!
-	A generic interface for implementing different compression algorithm used in the CryptedObject format.
+	An abstract class for implementing different compression algorithm used in CryptedObjects.
 */
-class ICryptedObjectAlgorithm
+class CryptedObjectAlgorithm
 {
 public:
+	CryptedObjectAlgorithm() : m_dwFourCC(0) {}
+
 	/*!
 		Compress a pack of data.
 
@@ -57,9 +59,13 @@ public:
 
 	virtual uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) = 0 { return 0; }
 
-	virtual uint32_t GetFourCC() = 0 { return 0; }
-
 	virtual bool HaveCryptation() = 0 { return false; }
+
+	void ChangeFourCC(uint32_t dwFourCC) { m_dwFourCC = dwFourCC; }
+	uint32_t GetFourCC() { return m_dwFourCC; }
+
+protected:
+	uint32_t m_dwFourCC;
 };
 
 #endif // CRYPTEDOBJECTALGORITHM_HPP

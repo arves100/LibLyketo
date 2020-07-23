@@ -31,7 +31,7 @@ void Proto::SetKeys(const uint32_t* adwKeys)
 	m_upObject->SetKeys(adwKeys);
 }
 
-void Proto::SetAlgorithm(ICryptedObjectAlgorithm* pAlgorithm)
+void Proto::SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm)
 {
 	m_upObject->SetAlgorithm(pAlgorithm);
 }

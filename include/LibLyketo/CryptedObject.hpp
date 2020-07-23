@@ -64,16 +64,16 @@ public:
 	size_t GetSize() const { return m_nBufferLen; }
 
 	void SetKeys(const uint32_t* adwKeys);
-	void SetAlgorithm(ICryptedObjectAlgorithm* pAlgorithm);
+	void SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm);
 
 	const uint32_t* GetKeys() const { return m_adwKeys; }
-	ICryptedObjectAlgorithm* GetAlgorithm() const { return m_pAlgorithm; }
+	CryptedObjectAlgorithm* GetAlgorithm() const { return m_pAlgorithm; }
 
 private:
 	struct CryptedObjectHeader m_sHeader;
 	
 	uint32_t m_adwKeys[4];
-	ICryptedObjectAlgorithm* m_pAlgorithm;
+	CryptedObjectAlgorithm* m_pAlgorithm;
 
 	uint8_t* m_pBuffer;
 	size_t m_nBufferLen;

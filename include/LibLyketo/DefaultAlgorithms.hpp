@@ -14,9 +14,11 @@
 /*!
 	Implementation of ICompressAlgorithm with Lzo1x
 */
-class DefaultAlgorithmLzo1x : public ICryptedObjectAlgorithm
+class DefaultAlgorithmLzo1x : public CryptedObjectAlgorithm
 {
 public:
+	DefaultAlgorithmLzo1x();
+
 	/*!
 		Compress a pack of data.
 
@@ -53,21 +55,23 @@ public:
 	*/
 	size_t GetWrostSize(size_t dwOriginalSize) override;
 
-	uint32_t GetFourCC() override;
+	
 
 	bool HaveCryptation() override;
 
 	uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 	void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
-};
 
+};
 
 /*!
 	Implementation of ICompressAlgorithm with Snappy
 */
-class DefaultAlgorithmSnappy : public ICryptedObjectAlgorithm
+class DefaultAlgorithmSnappy : public CryptedObjectAlgorithm
 {
 public:
+	DefaultAlgorithmSnappy();
+
 	/*!
 		Compress a pack of data.
 
@@ -104,7 +108,6 @@ public:
 	*/
 	size_t GetWrostSize(size_t dwOriginalSize) override;
 
-	uint32_t GetFourCC() override;
 	bool HaveCryptation() override;
 	uint32_t Decrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
 	void Encrypt(const uint8_t* input, uint8_t* output, size_t size, const uint32_t* key) override;
@@ -112,7 +115,7 @@ public:
 
 namespace DefaultAlgorithms
 {
-	ICryptedObjectAlgorithm* GetDefaultAlgorithm(uint32_t dwFourCC);
+	CryptedObjectAlgorithm* GetDefaultAlgorithm(uint32_t dwFourCC);
 	uint32_t GetFourCC(const uint8_t* pInput);
 }
 

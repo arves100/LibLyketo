@@ -15,6 +15,11 @@
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
 
 // LZO (MCOZ)
+DefaultAlgorithmLzo1x::DefaultAlgorithmLzo1x()
+{
+	m_dwFourCC = MAKEFOURCC('M', 'C', 'O', 'Z');
+}
+
 bool DefaultAlgorithmLzo1x::Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
 {
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
@@ -58,14 +63,14 @@ void DefaultAlgorithmLzo1x::Encrypt(const uint8_t* input, uint8_t* output, size_
 	return XTEA::Encrypt(input, output, size, key, 32);
 }
 
-uint32_t DefaultAlgorithmLzo1x::GetFourCC()
-{
-	return MAKEFOURCC('M', 'C', 'O', 'Z');
-}
-
 // ------------------------------------------------------------------------------------------------------------------
 
 // Snappy (MCPS)
+DefaultAlgorithmSnappy::DefaultAlgorithmSnappy()
+{
+	m_dwFourCC = MAKEFOURCC('M', 'C', 'S', 'P');
+}
+
 bool DefaultAlgorithmSnappy::Compress(const uint8_t* pbInput, uint8_t* pbOutput, size_t dwInputLength, size_t* pdwOutputLength)
 {
 	if (!pbOutput || !pbInput || dwInputLength < 1 || !pdwOutputLength || *pdwOutputLength < 1)
@@ -116,16 +121,11 @@ bool DefaultAlgorithmSnappy::HaveCryptation()
 	return true;
 }
 
-uint32_t DefaultAlgorithmSnappy::GetFourCC()
-{
-	return MAKEFOURCC('M', 'C', 'S', 'P');
-}
-
 // ------------------------------------------------------------------------------------------------------------------
 
 namespace DefaultAlgorithms
 {
-	ICryptedObjectAlgorithm* GetDefaultAlgorithm(uint32_t dwFourCC)
+	CryptedObjectAlgorithm* GetDefaultAlgorithm(uint32_t dwFourCC)
 	{
 		switch (dwFourCC)
 		{

@@ -70,6 +70,9 @@ public:
 	const uint8_t* GetBuffer() const { return m_pBuffer; }
 	size_t GetBufferSize() const { return m_nBufferSize; }
 
+	void SetSnappyFourCC(uint32_t dwFcc) { m_dwSnappyFourCC = dwFcc; }
+	void SetLzo1xFourCC(uint32_t dwFcc) { m_dwLzoFourCC = dwFcc; }
+
 protected:
 	bool Get(EterPackFile sInfo);
 
@@ -84,6 +87,8 @@ protected:
 	size_t m_nBufferSize;
 
 	uint32_t m_dwEpkKeys[4];
+
+	uint32_t m_dwSnappyFourCC, m_dwLzoFourCC;
 };
 
 #endif // ETERPACK_HPP

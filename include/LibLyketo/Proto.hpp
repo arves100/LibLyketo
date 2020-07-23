@@ -66,7 +66,7 @@ public:
 	bool Pack(const uint8_t* pbInput, size_t nLength, bool bEncrypt = true);
 
 	void SetKeys(const uint32_t* adwKeys);
-	void SetAlgorithm(ICryptedObjectAlgorithm* pAlgorithm);
+	void SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm);
 
 	void SetItemProtoVersion(uint32_t dwVersion) { m_sItemProtoNew.dwVersion = dwVersion; }
 	void SetItemProtoStride(uint32_t dwStride) { m_sItemProtoNew.dwStride = dwStride; }

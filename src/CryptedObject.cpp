@@ -27,7 +27,7 @@ CryptedObject::~CryptedObject()
 	m_pAlgorithm = nullptr;
 }
 
-void CryptedObject::SetAlgorithm(ICryptedObjectAlgorithm* pAlgorithm)
+void CryptedObject::SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm)
 {
 	m_pAlgorithm = pAlgorithm;
 }

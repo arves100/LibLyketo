@@ -28,7 +28,7 @@ EterPackFile::EterPackFile() : dwId(0), dwFilenameCRC32(0), dwRealSize(0), dwSiz
 
 EterPackHeader::EterPackHeader() : dwFourCC(MAKEFOURCC('E', 'P', 'K', 'D')), dwVersion(2), dwElements(0) {}
 
-EterPack::EterPack() : m_pcFS(nullptr), m_sHeader(), m_pBuffer(nullptr), m_nBufferSize(0)
+EterPack::EterPack() : m_pcFS(nullptr), m_sHeader(), m_pBuffer(nullptr), m_nBufferSize(0), m_dwSnappyFourCC(MAKEFOURCC('M', 'C', 'S', 'P')), m_dwLzoFourCC(MAKEFOURCC('M','C','O','Z'))
 {
 	memset(m_dwEpkKeys, 0, sizeof(m_dwEpkKeys));
 }
@@ -165,7 +165,7 @@ bool EterPack::DecryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t*
 	if (!pbInput || !pOutput || dwInputLen < 1 || dwOutputLen < 1)
 		return false;
 
-	if (bType == Uncompressed)
+	if (bType == Uncompressed) // Raw
 	{
 		if (dwInputLen != dwOutputLen)
 			return false;
@@ -173,18 +173,24 @@ bool EterPack::DecryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t*
 		memcpy_s(pOutput, dwOutputLen, pbInput, dwInputLen);
 		return true;
 	}
-	else if (bType == CryptedObject_Lzo1x || bType == CryptedObject_Snappy) // LZO/Snappy + XTEA
+	else if (bType == CryptedObject_Lzo1x || bType == CryptedObject_Snappy) // Crypted object
 	{
 		CryptedObject obj;
 
 		obj.SetKeys(m_dwEpkKeys);
 		
-		ICryptedObjectAlgorithm* pAlgorithm = nullptr;
+		CryptedObjectAlgorithm* pAlgorithm = nullptr;
 
 		if (bType == CryptedObject_Snappy)
+		{
 			pAlgorithm = new DefaultAlgorithmSnappy();
+			pAlgorithm->ChangeFourCC(m_dwSnappyFourCC);
+		}
 		else
+		{
 			pAlgorithm = new DefaultAlgorithmLzo1x();
+			pAlgorithm->ChangeFourCC(m_dwLzoFourCC);
+		}
 
 		if (obj.Decrypt(pbInput, dwInputLen) != CryptedObjectErrors::Ok)
 		{
@@ -219,18 +225,24 @@ bool EterPack::EncryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t*
 		memcpy_s(pOutput, dwInputLen, pbInput, dwInputLen);
 		return true;
 	}
-	else if (bType == CryptedObject_Lzo1x || bType == CryptedObject_Snappy)
+	else if (bType == CryptedObject_Lzo1x || bType == CryptedObject_Snappy) // Crypted object
 	{
 		CryptedObject obj;
 
 		obj.SetKeys(m_dwEpkKeys);
 
-		ICryptedObjectAlgorithm* pAlgorithm = nullptr;
+		CryptedObjectAlgorithm* pAlgorithm = nullptr;
 
 		if (bType == CryptedObject_Snappy)
+		{
 			pAlgorithm = new DefaultAlgorithmSnappy();
+			pAlgorithm->ChangeFourCC(m_dwSnappyFourCC);
+		}
 		else
+		{
 			pAlgorithm = new DefaultAlgorithmLzo1x();
+			pAlgorithm->ChangeFourCC(m_dwLzoFourCC);
+		}
 
 		if (obj.Encrypt(pbInput, dwInputLen) != CryptedObjectErrors::Ok)
 			return false;
