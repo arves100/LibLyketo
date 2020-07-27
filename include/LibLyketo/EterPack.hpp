@@ -18,6 +18,13 @@
 #include <vector>
 #include <memory>
 
+#ifdef DecryptFile
+#undef DecryptFile
+#endif
+#ifdef EncryptFile
+#undef EncryptFile
+#endif
+
 struct EterPackFile
 {
 	uint32_t dwId;
@@ -57,13 +64,13 @@ public:
 	EterPack();
 	virtual ~EterPack();
 
-	bool Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFileSystem>& pcFS);
+	bool Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFileSystem> pcFS);
 	const EterPackFile* GetInfo(uint32_t dwCRC32);
 	const EterPackFile* GetInfo(std::string szFileName);
 
 	bool Get(EterPackFile sInfo, const uint32_t* adwKeys = nullptr, uint32_t dwFourcc = 0);
 
-	bool Create(std::shared_ptr<IFileSystem>& pcFSm);
+	bool Create(std::shared_ptr<IFileSystem> pcFSm);
 	bool Put(std::string szFile, const uint8_t* pbContent, uint32_t dwContentLen, EterPackTypes eType, const uint32_t* adwKeys = nullptr, uint32_t dwFourcc = 0);
 	bool Save();
 
@@ -74,6 +81,8 @@ public:
 
 	void SetVersion(uint32_t dwVersion) { m_sHeader.dwVersion = dwVersion; }
 	void SetFourCC(uint32_t dwFcc) { m_sHeader.dwFourCC = dwFcc; }
+
+	std::map<uint32_t, struct EterPackFile> GetFiles() const { return m_mFiles; }
 
 protected:
 	bool DecryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t* pOutput, uint32_t dwOutputLen, EterPackTypes bType, const uint32_t* adwKeys, uint32_t dwFourcc);

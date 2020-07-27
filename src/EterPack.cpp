@@ -36,7 +36,7 @@ EterPack::~EterPack()
 {
 }
 
-bool EterPack::Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFileSystem>& pcFS)
+bool EterPack::Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFileSystem> pcFS)
 {
 	if (!pbInput || nLength < 12)
 		return false;
@@ -78,7 +78,7 @@ bool EterPack::Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFil
 	return true;
 }
 
-bool EterPack::Create(std::shared_ptr<IFileSystem>& pcFS)
+bool EterPack::Create(std::shared_ptr<IFileSystem> pcFS)
 {
 	m_mFiles.clear();
 	m_pcFS = pcFS;
@@ -114,7 +114,7 @@ bool EterPack::Get(EterPackFile sInfo, const uint32_t* adwKeys, uint32_t dwFourc
 		return false;
 	}
 
-	return DecryptFile(cData.data(), cData.size(), m_pBuffer.data(), m_pBuffer.size(), static_cast<EterPackTypes>(sInfo.bType), adwKeys, dwFourcc);
+	return DecryptFile(cData.data(), sInfo.dwSize, m_pBuffer.data(), sInfo.dwRealSize, static_cast<EterPackTypes>(sInfo.bType), adwKeys, dwFourcc);
 }
 
 const EterPackFile* EterPack::GetInfo(std::string szFileName)
