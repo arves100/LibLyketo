@@ -16,6 +16,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <memory>
 
 struct EterPackFile
 {
@@ -44,13 +45,10 @@ struct EterPackHeader
 
 enum EterPackTypes : uint8_t
 {
-	Uncompressed,
-	Compress_Lzo,
-	CryptedObject_Lzo1x,
-	Parama,
-	HybridCrypt,
-	HybridCrypt2,
-	CryptedObject_Snappy,
+	Uncompressed = 0,
+	CryptedObject_Lzo1x = 1,
+	CryptedObject_Lzo1x_Xtea = 2,
+	CryptedObject_Snappy = 6,
 };
 
 class EterPack
@@ -59,38 +57,33 @@ public:
 	EterPack();
 	virtual ~EterPack();
 
-	bool Load(const uint8_t* pbInput, size_t nLength, IFileSystem* pcFS);
+	bool Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFileSystem>& pcFS);
 	const EterPackFile* GetInfo(uint32_t dwCRC32);
-	bool Get(std::string szFileName);
+	const EterPackFile* GetInfo(std::string szFileName);
 
-	bool Create(IFileSystem* pcFSm);
-	bool Put(std::string szFile, const uint8_t* pbContent, uint32_t dwContentLen, EterPackTypes eType);
+	bool Get(EterPackFile sInfo, const uint32_t* adwKeys = nullptr, uint32_t dwFourcc = 0);
+
+	bool Create(std::shared_ptr<IFileSystem>& pcFSm);
+	bool Put(std::string szFile, const uint8_t* pbContent, uint32_t dwContentLen, EterPackTypes eType, const uint32_t* adwKeys = nullptr, uint32_t dwFourcc = 0);
 	bool Save();
 
-	const uint8_t* GetBuffer() const { return m_pBuffer; }
-	size_t GetBufferSize() const { return m_nBufferSize; }
-
-	void SetSnappyFourCC(uint32_t dwFcc) { m_dwSnappyFourCC = dwFcc; }
-	void SetLzo1xFourCC(uint32_t dwFcc) { m_dwLzoFourCC = dwFcc; }
+	const uint8_t* GetBuffer() const { return m_pBuffer.data(); }
+	size_t GetBufferSize() const { return m_pBuffer.size(); }
 
 	EterPackHeader GetHeader() const { return m_sHeader; }
 
+	void SetVersion(uint32_t dwVersion) { m_sHeader.dwVersion = dwVersion; }
+	void SetFourCC(uint32_t dwFcc) { m_sHeader.dwFourCC = dwFcc; }
+
 protected:
-	bool Get(EterPackFile sInfo);
+	bool DecryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t* pOutput, uint32_t dwOutputLen, EterPackTypes bType, const uint32_t* adwKeys, uint32_t dwFourcc);
+	bool EncryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t* pOutput, uint32_t* dwOutputLen, EterPackTypes bType, const uint32_t* adwKeys, uint32_t dwFourcc);
 
-	bool DecryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t* pOutput, uint32_t dwOutputLen, EterPackTypes bType);
-	bool EncryptFile(const uint8_t* pbInput, uint32_t dwInputLen, uint8_t* pOutput, uint32_t* dwOutputLen, EterPackTypes bType);
-
-	IFileSystem* m_pcFS;
+	std::shared_ptr<IFileSystem> m_pcFS;
 	std::map<uint32_t, struct EterPackFile> m_mFiles;
 	struct EterPackHeader m_sHeader;
 
-	uint8_t* m_pBuffer;
-	size_t m_nBufferSize;
-
-	uint32_t m_dwEpkKeys[4];
-
-	uint32_t m_dwSnappyFourCC, m_dwLzoFourCC;
+	std::vector<uint8_t> m_pBuffer;
 };
 
 #endif // ETERPACK_HPP
