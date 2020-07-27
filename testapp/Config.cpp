@@ -353,4 +353,4 @@ void Config::StringToKey(uint8_t* pOut, std::string sz)
 	}
 }
 
-static Config* Config::m_sConfig = nullptr;
+/*static*/ Config* Config::m_sConfig = nullptr;
