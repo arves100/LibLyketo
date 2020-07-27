@@ -13,8 +13,6 @@
 
 #include "CryptedObject.hpp"
 
-#include <memory>
-
 enum class ProtoType
 {
 	MobProto,
@@ -63,10 +61,7 @@ public:
 	bool Unpack(const uint8_t* pbInput, size_t nLength);
 
 	bool Create(ProtoType eType, uint32_t dwElements);
-	bool Pack(const uint8_t* pbInput, size_t nLength, bool bEncrypt = true);
-
-	void SetKeys(const uint32_t* adwKeys);
-	void SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm);
+	bool Pack(const uint8_t* pbInput, size_t nLength, EncryptType sType = EncryptType::CompressAndEncrypt);
 
 	void SetItemProtoVersion(uint32_t dwVersion) { m_sItemProtoNew.dwVersion = dwVersion; }
 	void SetItemProtoStride(uint32_t dwStride) { m_sItemProtoNew.dwStride = dwStride; }
@@ -82,7 +77,7 @@ public:
 	struct ItemProtoHeaderOld GetItemProtoOldHeader() const { return m_sItemProtoOld; }
 	struct MobProtoHeader GetMobProtoHeader() const { return m_sMobProto; }
 
-	CryptedObject* GetCryptedObject() const { return m_upObject.get(); }
+	CryptedObject* GetCryptedObject() { return &m_cObject; }
 
 private:
 	ItemProtoHeaderOld m_sItemProtoOld;
@@ -90,10 +85,9 @@ private:
 	ItemProtoHeaderNew m_sItemProtoNew;
 
 	ProtoType m_eType;
-	std::unique_ptr<CryptedObject> m_upObject;
+	CryptedObject m_cObject;
 
-	uint8_t* m_pBuffer;
-	size_t m_nBufferLen;
+	std::vector<uint8_t> m_pBuffer;
 };
 
 #endif // PROTO_HPP

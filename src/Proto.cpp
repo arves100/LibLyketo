@@ -15,52 +15,37 @@ ItemProtoHeaderOld::ItemProtoHeaderOld() : dwFourCC(MAKEFOURCC('M', 'I', 'P', 'T
 MobProtoHeader::MobProtoHeader() : dwFourCC(MAKEFOURCC('M', 'M', 'P', 'T')), dwElements(0), dwCryptedObjectSize(0) {}
 ItemProtoHeaderNew::ItemProtoHeaderNew() : dwFourCC(MAKEFOURCC('M', 'I', 'P', 'X')), dwVersion(0), dwStride(163), dwElements(0), dwCryptedObjectSize(0) {} // Default 40k stride
 
-Proto::Proto() : m_sItemProtoOld(), m_sMobProto(), m_sItemProtoNew(), m_eType(ProtoType::MobProto), m_upObject(new CryptedObject()), m_pBuffer(nullptr), m_nBufferLen(0)
+Proto::Proto() : m_sItemProtoOld(), m_sMobProto(), m_sItemProtoNew(), m_eType(ProtoType::MobProto)
 {
 
 }
 
 Proto::~Proto()
 {
-	if (m_pBuffer)
-		delete[] m_pBuffer;
-}
-
-void Proto::SetKeys(const uint32_t* adwKeys)
-{
-	m_upObject->SetKeys(adwKeys);
-}
-
-void Proto::SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm)
-{
-	m_upObject->SetAlgorithm(pAlgorithm);
 }
 
 const uint8_t* Proto::GetBuffer() const
 {
-	if (m_pBuffer)
-		return m_pBuffer;
+	if (m_pBuffer.size() > 0)
+		return m_pBuffer.data();
 
-	return m_upObject->GetBuffer();
+	return m_cObject.GetBuffer();
 }
 
 size_t Proto::GetSize() const
 {
-	if (m_pBuffer)
-		return m_nBufferLen;
+	if (m_pBuffer.size() > 0)
+		return m_pBuffer.size();
 
-	return m_upObject->GetSize();
+	return m_cObject.GetSize();
 }
 
 bool Proto::Unpack(const uint8_t* pbInput, size_t nLength)
 {
-	if (!pbInput || nLength < sizeof(uint32_t) || !m_upObject->GetAlgorithm())
+	if (!pbInput || nLength < sizeof(uint32_t))
 		return false;
 
-	if (m_pBuffer)
-		delete[] m_pBuffer;
-
-	m_pBuffer = nullptr;
+	m_pBuffer.clear();
 
 	// Get FourCC
 	const uint32_t* dwFourCC = reinterpret_cast<const uint32_t*>(pbInput);
@@ -106,7 +91,7 @@ bool Proto::Unpack(const uint8_t* pbInput, size_t nLength)
 	if (nLength < (dwCryptedObjectSize + dwHeaderSize))
 		return false;
 
-	if (m_upObject->Decrypt(pbInput + dwHeaderSize, nLength - dwHeaderSize) != CryptedObjectErrors::Ok)
+	if (m_cObject.Decrypt(pbInput + dwHeaderSize, nLength - dwHeaderSize) != CryptedObjectErrors::Ok)
 		return false;
 
 	return true;
@@ -132,62 +117,66 @@ bool Proto::Create(ProtoType eType, uint32_t dwElements)
 		return false;
 	}
 
-	if (m_pBuffer)
-		delete[] m_pBuffer;
-
-	m_pBuffer = nullptr;
+	m_pBuffer.clear();
 
 	m_eType = eType;
 	return true;
 }
 
-bool Proto::Pack(const uint8_t* pbInput, size_t nLength, bool bEncrypt)
+bool Proto::Pack(const uint8_t* pbInput, size_t nLength, EncryptType sType)
 {
-	if (!pbInput || nLength < 1 || !m_upObject->GetAlgorithm())
+	if (!pbInput || nLength < 1)
 		return false;
 
 	uint32_t dwElements;
+	size_t nBufferLen;
+
+	if (m_cObject.Encrypt(pbInput, nLength, sType) != CryptedObjectErrors::Ok)
+		return false;
+
+	size_t cSize = m_cObject.GetSize();
 
 	// Setup variables
 	switch (m_eType)
 	{
 	case ProtoType::ItemProto:
 		dwElements = m_sItemProtoNew.dwElements;
-		m_nBufferLen = m_upObject->GetSize() + sizeof(struct ItemProtoHeaderNew);
+		nBufferLen = cSize + sizeof(struct ItemProtoHeaderNew);
 		break;
 	case ProtoType::MobProto:
 		dwElements = m_sMobProto.dwElements;
-		m_nBufferLen = m_upObject->GetSize() + sizeof(struct MobProtoHeader);
+		nBufferLen = cSize + sizeof(struct MobProtoHeader);
 		break;
 	case ProtoType::ItemProto_Old:
 		dwElements = m_sItemProtoOld.dwElements;
-		m_nBufferLen = m_upObject->GetSize() + sizeof(struct ItemProtoHeaderOld);
+		nBufferLen = cSize + sizeof(struct ItemProtoHeaderOld);
 		break;
 	default:
 		return false;
 	}
 
-	if (m_upObject->Encrypt(pbInput, nLength, bEncrypt) != CryptedObjectErrors::Ok)
-		return false;
+
 
 	// 1. Store Crypted Object
-	m_pBuffer = new uint8_t[m_nBufferLen];
-	memcpy_s(m_pBuffer + (m_nBufferLen - m_upObject->GetSize()), m_nBufferLen - m_upObject->GetSize(), m_upObject->GetBuffer(), m_upObject->GetSize());
+	m_pBuffer.reserve(nBufferLen);
+	m_pBuffer.resize(nBufferLen);
+
+	memcpy_s(m_pBuffer.data() + (nBufferLen - cSize), nBufferLen - cSize, m_cObject.GetBuffer(), cSize);
 
 	// 2. Copy proto info
 	switch (m_eType)
 	{
 	case ProtoType::ItemProto:
-		m_sItemProtoNew.dwCryptedObjectSize = static_cast<uint32_t>(m_upObject->GetSize());
-		memcpy_s(m_pBuffer, m_nBufferLen, &m_sItemProtoNew, sizeof(m_sItemProtoNew));
+		m_sItemProtoNew.dwCryptedObjectSize = static_cast<uint32_t>(cSize);
+		memcpy_s(m_pBuffer.data(), nBufferLen, &m_sItemProtoNew, sizeof(m_sItemProtoNew));
 		break;
 	case ProtoType::ItemProto_Old:
-		m_sItemProtoOld.dwCryptedObjectSize = static_cast<uint32_t>(m_upObject->GetSize());
-		memcpy_s(m_pBuffer, m_nBufferLen, &m_sItemProtoOld, sizeof(m_sItemProtoOld));
+		m_sItemProtoOld.dwCryptedObjectSize = static_cast<uint32_t>(cSize);
+		memcpy_s(m_pBuffer.data(), nBufferLen, &m_sItemProtoOld, sizeof(m_sItemProtoOld));
 		break;
 	case ProtoType::MobProto:
-		m_sMobProto.dwCryptedObjectSize = static_cast<uint32_t>(m_upObject->GetSize());
-		memcpy_s(m_pBuffer, m_nBufferLen, &m_sMobProto, sizeof(m_sMobProto));
+		m_sMobProto.dwCryptedObjectSize = static_cast<uint32_t>(cSize);
+		memcpy_s(m_pBuffer.data(), nBufferLen, &m_sMobProto, sizeof(m_sMobProto));
 		break;
 	default:
 		return false;
