@@ -13,6 +13,9 @@
 
 #include "ICryptedObjectAlgorithm.hpp"
 
+#include <vector>
+#include <memory>
+
 /*!
 	A definition of a CryptedObject.
 
@@ -51,6 +54,13 @@ enum class CryptedObjectErrors
 	InvalidFourCC
 };
 
+enum class EncryptType
+{
+	None,
+	CompressOnly,
+	CompressAndEncrypt,
+};
+
 class CryptedObject
 {
 public:
@@ -58,16 +68,16 @@ public:
 	virtual ~CryptedObject();
 
 	CryptedObjectErrors Decrypt(const uint8_t* pbInput, size_t nLength);
-	CryptedObjectErrors Encrypt(const uint8_t* pbInput, size_t nLength, bool bEncrypt = true);
+	CryptedObjectErrors Encrypt(const uint8_t* pbInput, size_t nLength, EncryptType sType = EncryptType::CompressAndEncrypt);
 	
-	const uint8_t* GetBuffer() const { return m_pBuffer; }
-	size_t GetSize() const { return m_nBufferLen; }
+	const uint8_t* GetBuffer() const { return m_pBuffer.data(); }
+	size_t GetSize() const { return m_pBuffer.size(); }
 
 	void SetKeys(const uint32_t* adwKeys);
-	void SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm);
+	void SetAlgorithm(std::shared_ptr<CryptedObjectAlgorithm>& pAlgorithm);
 
 	const uint32_t* GetKeys() const { return m_adwKeys; }
-	CryptedObjectAlgorithm* GetAlgorithm() const { return m_pAlgorithm; }
+	std::shared_ptr<CryptedObjectAlgorithm> GetAlgorithm() const { return m_pAlgorithm; }
 
 	CryptedObjectHeader GetHeader() const { return m_sHeader; }
 
@@ -75,10 +85,9 @@ private:
 	struct CryptedObjectHeader m_sHeader;
 	
 	uint32_t m_adwKeys[4];
-	CryptedObjectAlgorithm* m_pAlgorithm;
+	std::shared_ptr<CryptedObjectAlgorithm> m_pAlgorithm;
 
-	uint8_t* m_pBuffer;
-	size_t m_nBufferLen;
+	std::vector<uint8_t> m_pBuffer;
 };
 
 #endif // CRYPTEDOBJECT_HPP

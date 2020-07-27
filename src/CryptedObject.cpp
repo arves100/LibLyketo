@@ -13,21 +13,17 @@
 
 CryptedObjectHeader::CryptedObjectHeader() : dwFourCC(0), dwAfterCryptLength(0), dwAfterCompressLength(0), dwRealLength(0) {}
 
-CryptedObject::CryptedObject() : m_sHeader(), m_pAlgorithm(nullptr), m_pBuffer(nullptr), m_nBufferLen(0)
+CryptedObject::CryptedObject() : m_sHeader(), m_pAlgorithm(nullptr)
 {
 	memset(m_adwKeys, 0, sizeof(m_adwKeys));
 }
 
 CryptedObject::~CryptedObject()
 {
-	if (m_pBuffer)
-		delete[] m_pBuffer;
-
-	m_pBuffer = nullptr;
 	m_pAlgorithm = nullptr;
 }
 
-void CryptedObject::SetAlgorithm(CryptedObjectAlgorithm* pAlgorithm)
+void CryptedObject::SetAlgorithm(std::shared_ptr<CryptedObjectAlgorithm>& pAlgorithm)
 {
 	m_pAlgorithm = pAlgorithm;
 }
@@ -45,10 +41,7 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 	if (!m_pAlgorithm)
 		return CryptedObjectErrors::InvalidAlgorithm;
 
-	if (m_pBuffer)
-		delete[] m_pBuffer;
-
-	m_pBuffer = nullptr;
+	m_pBuffer.clear();
 
 	m_sHeader = *(struct CryptedObjectHeader*)(pbInput);
 
@@ -120,11 +113,11 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 
 		inputData = pData + sizeof(uint32_t);
 
-		m_nBufferLen = m_sHeader.dwRealLength;
-		m_pBuffer = new uint8_t[m_nBufferLen];
+		m_pBuffer.reserve(m_sHeader.dwRealLength);
+		m_pBuffer.resize(m_sHeader.dwRealLength);
 
 		size_t nRealLength = m_sHeader.dwRealLength;
-		if (!m_pAlgorithm->Decompress(inputData, m_pBuffer, m_sHeader.dwAfterCompressLength, &nRealLength))
+		if (!m_pAlgorithm->Decompress(inputData, m_pBuffer.data(), m_sHeader.dwAfterCompressLength, &nRealLength))
 		{
 			delete[] pData;
 			return CryptedObjectErrors::CompressFail;
@@ -158,10 +151,10 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 			return CryptedObjectErrors::InvalidRealLength;
 		}
 
-		m_nBufferLen = nRealDataLenCalculated;
-		m_pBuffer = new uint8_t[m_nBufferLen];
+		m_pBuffer.reserve(nRealDataLenCalculated);
+		m_pBuffer.resize(nRealDataLenCalculated);
 
-		memcpy_s(m_pBuffer, m_nBufferLen, pbInput + sizeof(struct CryptedObjectHeader), m_nBufferLen);
+		memcpy_s(m_pBuffer.data(), m_pBuffer.size(), pbInput + sizeof(struct CryptedObjectHeader), m_pBuffer.size());
 	}
 
 	if (pData)
@@ -170,83 +163,70 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 	return CryptedObjectErrors::Ok;
 }
 
-CryptedObjectErrors CryptedObject::Encrypt(const uint8_t* pbInput, size_t nLength, bool bEncrypt)
+CryptedObjectErrors CryptedObject::Encrypt(const uint8_t* pbInput, size_t nLength, EncryptType sType)
 {
-	// §NOTE: No support for uncompressed crypted objects
-
 	if (!pbInput || nLength < 1)
 		return CryptedObjectErrors::InvalidInput;
 
-
-	if (m_pBuffer)
-		delete[] m_pBuffer;
-
-	m_pBuffer = nullptr;
+	m_pBuffer.clear();
 
 	m_sHeader.dwFourCC = m_pAlgorithm->GetFourCC();
 	m_sHeader.dwRealLength = static_cast<uint32_t>(nLength);
 
-	size_t nCompressedSize = m_pAlgorithm->GetWrostSize(nLength);
-
-	uint8_t* pData = new uint8_t[nCompressedSize + sizeof(uint32_t)];
-
-	if (!pData)
-	{
-		return CryptedObjectErrors::NoMemory;
-	}
 
 	// 1. Compress the data
-	if (!m_pAlgorithm->Compress(pbInput, pData, nLength, &nCompressedSize))
-	{
-		delete[] pData;
-		return CryptedObjectErrors::CompressFail;
-	}
+	if (sType != EncryptType::None) {
+		size_t nCompressedSize = m_pAlgorithm->GetWrostSize(nLength);
+		std::vector<uint8_t> pData(nCompressedSize + sizeof(uint32_t));
 
-	m_sHeader.dwAfterCompressLength = static_cast<uint32_t>(nCompressedSize);
-
-	memcpy_s(pData + sizeof(uint32_t), nCompressedSize, pData, nCompressedSize);
-	uint32_t* pnFourCC = reinterpret_cast<uint32_t*>(pData);
-	*pnFourCC = m_sHeader.dwFourCC;
-
-	// 3. Encrypt data
-	if (bEncrypt && m_pAlgorithm->HaveCryptation())
-	{
-		m_sHeader.dwAfterCryptLength = m_sHeader.dwAfterCompressLength + 20;
-		m_nBufferLen = m_sHeader.dwAfterCryptLength + sizeof(struct CryptedObjectHeader);
-		m_pBuffer = new uint8_t[m_nBufferLen];
-
-		if (!m_pBuffer)
+		if (!m_pAlgorithm->Compress(pbInput, pData.data(), nLength, &nCompressedSize))
 		{
-			delete[] pData;
-			return CryptedObjectErrors::NoMemory;
+			return CryptedObjectErrors::CompressFail;
 		}
 
-		m_pAlgorithm->Encrypt(pData, m_pBuffer + sizeof(struct CryptedObjectHeader), m_sHeader.dwAfterCryptLength, m_adwKeys);
+		m_sHeader.dwAfterCompressLength = static_cast<uint32_t>(nCompressedSize);
+
+		memcpy_s(pData.data() + sizeof(uint32_t), nCompressedSize, pData.data(), nCompressedSize);
+		uint32_t* pnFourCC = reinterpret_cast<uint32_t*>(pData.data());
+		*pnFourCC = m_sHeader.dwFourCC;
+
+
+		// 3. Encrypt data
+		if (sType == EncryptType::CompressAndEncrypt && m_pAlgorithm->HaveCryptation())
+		{
+			m_sHeader.dwAfterCryptLength = m_sHeader.dwAfterCompressLength + 20;
+
+			uint32_t nBufferLen = m_sHeader.dwAfterCryptLength + sizeof(struct CryptedObjectHeader);
+
+			m_pBuffer.reserve(nBufferLen);
+			m_pBuffer.resize(nBufferLen);
+
+			m_pAlgorithm->Encrypt(pData.data(), m_pBuffer.data() + sizeof(struct CryptedObjectHeader), m_sHeader.dwAfterCryptLength, m_adwKeys);
+		}
+		else
+		{
+			m_sHeader.dwAfterCryptLength = 0;
+			uint32_t nBufferLen = m_sHeader.dwAfterCompressLength + sizeof(struct CryptedObjectHeader);
+
+			m_pBuffer.reserve(nBufferLen);
+			m_pBuffer.resize(nBufferLen);
+
+			memcpy_s(m_pBuffer.data() + sizeof(struct CryptedObjectHeader), m_pBuffer.size() - sizeof(struct CryptedObjectHeader), pData.data(), nCompressedSize + sizeof(uint32_t));
+		}
 	}
 	else
 	{
+		m_sHeader.dwAfterCompressLength = 0;
 		m_sHeader.dwAfterCryptLength = 0;
-		m_nBufferLen = m_sHeader.dwAfterCompressLength + sizeof(struct CryptedObjectHeader);
-		m_pBuffer = new uint8_t[m_nBufferLen];
-
-		if (!m_pBuffer)
-		{
-			delete[] pData;
-			return CryptedObjectErrors::NoMemory;
-		}
-
-		memcpy_s(m_pBuffer + sizeof(struct CryptedObjectHeader), m_nBufferLen - sizeof(struct CryptedObjectHeader), pData, nCompressedSize + sizeof(uint32_t));
 	}
 
 
 	// 4. Store header
-	struct CryptedObjectHeader* pHeader = reinterpret_cast<struct CryptedObjectHeader*>(m_pBuffer);
+	struct CryptedObjectHeader* pHeader = reinterpret_cast<struct CryptedObjectHeader*>(m_pBuffer.data());
 	pHeader->dwAfterCompressLength = m_sHeader.dwAfterCompressLength;
 	pHeader->dwAfterCryptLength = m_sHeader.dwAfterCryptLength;
 	pHeader->dwFourCC = m_sHeader.dwFourCC;
 	pHeader->dwRealLength = m_sHeader.dwRealLength;
-
-	delete[] pData;
 
 	return CryptedObjectErrors::Ok;
 }
