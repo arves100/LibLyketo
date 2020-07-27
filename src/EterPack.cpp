@@ -60,7 +60,7 @@ bool EterPack::Load(const uint8_t* pbInput, size_t nLength, std::shared_ptr<IFil
 	m_mFiles.clear();
 
 	size_t nOffset = sizeof(struct EterPackHeader);
-	for (uint32_t i = 0; i < m_sHeader.dwElements; i++)
+	for (uint32_t i = 0; i < m_sHeader.dwElements; i++, nOffset += sizeof(struct EterPackFile))
 	{
 		EterPackFile epf = *reinterpret_cast<const struct EterPackFile*>(pbInput + nOffset);
 
@@ -124,7 +124,7 @@ const EterPackFile* EterPack::GetInfo(std::string szFileName)
 
 	std::transform(szFileName.begin(), szFileName.end(), szFileName.begin(), ::tolower);
 
-	uint32_t dwCRC = crc32_fast(szFileName.data(), szFileName.size() + 1);
+	uint32_t dwCRC = crc32_fast(szFileName.data(), szFileName.size());
 
 	return GetInfo(dwCRC);
 }
