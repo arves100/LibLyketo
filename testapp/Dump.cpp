@@ -12,6 +12,57 @@
 
 namespace Dump
 {
+	void CryptedObject(const std::string& in, const std::string& out)
+	{
+		std::ifstream i(in, std::ifstream::binary);
+
+		if (!i.is_open())
+		{
+			SPDLOG_CRITICAL("Cannot open file to read {0}", in);
+			return;
+		}
+
+		std::ofstream o(out, std::ofstream::binary);
+
+		if (!o.is_open())
+		{
+			SPDLOG_CRITICAL("Cannot open file to write {0}", out);
+			return;
+		}
+
+		o << "Dump of CryptedObject: " << in << "\n";
+
+		i.seekg(0, std::ofstream::end);
+		auto pos = i.tellg();
+		i.seekg(0, std::ofstream::beg);
+
+		std::vector<uint8_t> data;
+		data.reserve(sizeof(CryptedObjectHeader));
+		data.resize(sizeof(CryptedObjectHeader));
+
+		SPDLOG_DEBUG("Reading input {0} with size {1}", in, sizeof(CryptedObjectHeader));
+
+		i.read(reinterpret_cast<char*>(data.data()), sizeof(CryptedObjectHeader));
+		i.close();
+
+		o << "File size: " << pos << "\n";
+
+		CryptedObjectHeader h = *reinterpret_cast<CryptedObjectHeader*>(data.data());
+
+		o << "Dump of CryptedObject:";
+		o << "\n\tFourCC: " << h.dwFourCC << " (" << FOURCC1(h.dwFourCC) << FOURCC2(h.dwFourCC) << FOURCC3(h.dwFourCC) << FOURCC4(h.dwFourCC) << ")";
+		o << "\n\tAfter compression size: " << h.dwAfterCompressLength;
+		o << "\n\tAfter cryptation size: " << h.dwAfterCryptLength;
+		o << "\n\tReal size: " << h.dwRealLength << "\n";
+
+		data.clear();
+
+		o << "Dump finished\n";
+
+		o.close();
+
+		SPDLOG_INFO("Completed!");
+	}
 
 	void EterPack(const std::string& in, const std::string& out)
 	{
@@ -60,7 +111,7 @@ namespace Dump
 		{
 			SPDLOG_DEBUG("EterPack is encrypted, decrypting...");
 
-			CryptedObject obj;
+			::CryptedObject obj;
 
 			obj.SetKeys(reinterpret_cast<const uint32_t*>(Config::instance()->m_eixKeys));
 			
@@ -90,7 +141,8 @@ namespace Dump
 			auto h = obj.GetHeader();
 
 			o << "Dump of CryptedObject:";
-			o << "\n\tFourCC: " << h.dwFourCC << "\n\tKeys: " << obj.GetKeys();
+			o << "\n\tFourCC: " << h.dwFourCC << " (" << FOURCC1(h.dwFourCC) << FOURCC2(h.dwFourCC) << FOURCC3(h.dwFourCC) << FOURCC4(h.dwFourCC) << ")";
+			o << "\n\tKeys: " << obj.GetKeys();
 			o << "\n\tDecrypted size (buffer): " << obj.GetSize();
 			o << "\n\tAfter compression size: " << h.dwAfterCompressLength;
 			o << "\n\tAfter cryptation size: " << h.dwAfterCryptLength;
@@ -127,7 +179,7 @@ namespace Dump
 
 		o << "Dump of EterPack Index:\n";
 		o << "\tElements: " << h.dwElements;
-		o << "\n\tFourCC: " << h.dwFourCC;
+		o << "\n\tFourCC: " << h.dwFourCC << " (" << FOURCC1(h.dwFourCC) << FOURCC2(h.dwFourCC) << FOURCC3(h.dwFourCC) << FOURCC4(h.dwFourCC) << ")";
 		o << "\n\tVersion: " << h.dwVersion;
 
 		o << "\nDump of elements:\n";

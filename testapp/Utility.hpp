@@ -5,6 +5,11 @@
 
 #include <fstream>
 
+#define FOURCC1(x) static_cast<char>(x & 0xFF)
+#define FOURCC2(x) static_cast<char>((x >> 8) & 0xFF)
+#define FOURCC3(x) static_cast<char>((x >> 16) & 0xFF)
+#define FOURCC4(x) static_cast<char>((x >> 24) & 0xFF)
+
 namespace Utility
 {
 	inline const char* TextFromCOError(CryptedObjectErrors err)

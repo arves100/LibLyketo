@@ -152,9 +152,12 @@ int main(int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (action == "dump" && type == "eterpack")
+	if (action == "dump")
 	{
-		Dump::EterPack(input, output);
+		if (type == "eterpack")
+			Dump::EterPack(input, output);
+		else if (type == "cryptobject")
+			Dump::CryptedObject(input, output);
 	}
 
 	return EXIT_SUCCESS;
