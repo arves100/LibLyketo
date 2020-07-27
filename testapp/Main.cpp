@@ -31,12 +31,12 @@ int main(int argc, char* argv[])
 		("configfile", "Specify a custom config file (default: lyketocli.json)", cxxopts::value<std::string>())
 		;
 
-	auto result = options.parse(argc, argv);
+	const auto result = options.parse(argc, argv);
 
 	if (result.count("help") > 0 || (result.count("input") < 1 && result.count("output") < 1 && result.count("type") < 1 && result.count("action") < 1))
 	{
 		std::cout << options.help() << std::endl;
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
 	// Logger creation
@@ -113,30 +113,49 @@ int main(int argc, char* argv[])
 		SPDLOG_WARN("Cannot parse the config file, default values will be used");
 	}
 
-	std::string action = result["action"].as<std::string>(), input = result["input"].as<std::string>(), output = result["output"].as<std::string>(), type = result["type"].as<std::string>();
+	std::string action, input, output, type;
 
-	SPDLOG_DEBUG("Action {0}", action);
-	SPDLOG_DEBUG("Input {0}", input);
-	SPDLOG_DEBUG("Output {0}", output);
-	SPDLOG_DEBUG("Type {0}", type);
+	if (result.count("action"))
+	{
+		action = result["action"].as<std::string>();
+	}
+	
+	if(result.count("input"))
+	{
+		input = result["input"].as<std::string>();
+	}
+
+	if (result.count("output"))
+	{
+		output = result["output"].as<std::string>();
+	}
+
+	if (result.count("type"))
+	{
+		type = result["type"].as<std::string>();
+	}
+
+	SPDLOG_DEBUG("Action {0}", action.empty() ? "is empty!" : action);
+	SPDLOG_DEBUG("Input {0}", input.empty() ? "is empty!" : input);
+	SPDLOG_DEBUG("Output {0}", output.empty() ? "is empty!" : output);
+	SPDLOG_DEBUG("Type {0}", type.empty() ? "is empty!" : type);
 
 	if (type != "item_proto" && type != "mob_proto" && type != "eterpack" && type != "cryptobject")
 	{
 		SPDLOG_CRITICAL("Invalid type argument {0}", type);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (action != "dump" && action != "encrypt" && action != "decrypt" && action != "unpack" && action != "pack")
 	{
 		SPDLOG_CRITICAL("Invalid action {0}", action);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (action == "dump" && type == "eterpack")
 	{
 		Dump::EterPack(input, output);
-		return 0;
 	}
 
-	return 0;
+	return EXIT_SUCCESS;
 }

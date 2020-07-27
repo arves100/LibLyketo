@@ -11,7 +11,7 @@
 namespace Dump
 {
 
-	void EterPack(std::string in, std::string out)
+	void EterPack(const std::string& in, const std::string& out)
 	{
 		std::ifstream i(in, std::ifstream::binary);
 
@@ -31,7 +31,7 @@ namespace Dump
 
 		CryptedObject obj;
 
-		obj.SetKeys()
+		obj.SetKeys(nullptr /* todo DEFAULT KEY*/);
 
 	}
 

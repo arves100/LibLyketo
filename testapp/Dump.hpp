@@ -4,5 +4,5 @@
 
 namespace Dump
 {
-	void EterPack(std::string in, std::string out);
+	void EterPack(const std::string& in, const std::string& out);
 }
