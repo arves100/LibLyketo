@@ -4,6 +4,8 @@ set(SOURCES
 	Config.cpp
 	Dump.hpp
 	Dump.cpp
+	Utility.hpp
+	Log.hpp
 )
 
 find_package(spdlog CONFIG REQUIRED)
