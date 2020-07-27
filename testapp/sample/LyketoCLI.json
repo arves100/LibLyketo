@@ -1,0 +1,26 @@
+{
+	"ItemProto" : {
+		"Version" : 1,
+		"Stride" : 163
+	},
+	
+	"FourCC" : {
+		"MobProto" : "MMPT",
+		"ItemProtoNew" : "MIPX",
+		"ItemProtoOld": "MIPT",
+		"EterPack": "EPKD",
+		"Snappy" : "MCSP",
+		"Lzo1x" : "MCOZ"
+	},
+	
+	"EterPack" : {
+		"Version" : 2
+	},
+	
+	"Keys" : {
+		"ItemProto" : "A1A40200AA155404E78B5A18ABD6AA01",
+		"MobProto": "467449000B4A0000B76E08009D186800",
+		"EterPackIndex" : "B99EB0026F69810563989B2879181A00",
+		"EterPackContent" : "22B8B40464B26E1FAEEA1800A6F6FB1C"
+	}
+}

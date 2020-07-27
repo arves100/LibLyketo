@@ -69,6 +69,8 @@ public:
 	const uint32_t* GetKeys() const { return m_adwKeys; }
 	CryptedObjectAlgorithm* GetAlgorithm() const { return m_pAlgorithm; }
 
+	CryptedObjectHeader GetHeader() const { return m_sHeader; }
+
 private:
 	struct CryptedObjectHeader m_sHeader;
 	

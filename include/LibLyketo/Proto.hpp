@@ -82,6 +82,8 @@ public:
 	struct ItemProtoHeaderOld GetItemProtoOldHeader() const { return m_sItemProtoOld; }
 	struct MobProtoHeader GetMobProtoHeader() const { return m_sMobProto; }
 
+	CryptedObject* GetCryptedObject() const { m_upObject.get(); }
+
 private:
 	ItemProtoHeaderOld m_sItemProtoOld;
 	MobProtoHeader m_sMobProto;

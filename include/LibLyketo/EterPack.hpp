@@ -73,6 +73,8 @@ public:
 	void SetSnappyFourCC(uint32_t dwFcc) { m_dwSnappyFourCC = dwFcc; }
 	void SetLzo1xFourCC(uint32_t dwFcc) { m_dwLzoFourCC = dwFcc; }
 
+	EterPackHeader GetHeader() const { return m_sHeader; }
+
 protected:
 	bool Get(EterPackFile sInfo);
 
