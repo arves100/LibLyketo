@@ -13,7 +13,7 @@ using json = nlohmann::json;
 
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
 
-Config::Config() : m_dwLzo1xFcc(MAKEFOURCC('M','C','O','Z')), m_dwSnappyFcc(MAKEFOURCC('M','C','S','P')), m_ipVersion(1), m_ipStride(163), m_ipNFcc(MAKEFOURCC('M','I','P','X')), m_ipOFcc(MAKEFOURCC('M','I','P','T')), m_mpFcc(MAKEFOURCC('M','M','P','T')), m_epkVersion(2)
+Config::Config() : m_dwLzo1xFcc(MAKEFOURCC('M','C','O','Z')), m_dwSnappyFcc(MAKEFOURCC('M','C','S','P')), m_ipVersion(1), m_ipStride(163), m_ipNFcc(MAKEFOURCC('M','I','P','X')), m_ipOFcc(MAKEFOURCC('M','I','P','T')), m_mpFcc(MAKEFOURCC('M','M','P','T')), m_epkVersion(2), m_dwEixFcc(MAKEFOURCC('E', 'P', 'K', 'D'))
 {
 	// Default keys
 	uint8_t itemproto[] = { 0xA1, 0xA4, 0x02, 0x00, 0xAA, 0x15, 0x54, 0x04, 0xE7, 0x8B, 0x5A, 0x18, 0xAB, 0xD6, 0xAA, 0x01 };
@@ -287,7 +287,26 @@ bool Config::Parse(std::string path)
 					}
 
 					m_dwLzo1xFcc = MAKEFOURCC(fcc[0], fcc[1], fcc[2], fcc[3]);
-					SPDLOG_INFO("Changed Snappy Lzo1x to {0}", fcc.c_str());
+					SPDLOG_INFO("Changed Lzo1x FourCC to {0}", fcc.c_str());
+				}
+				else if (ee.key() == "EterPack")
+				{
+					if (!ee.value().is_string())
+					{
+						SPDLOG_ERROR("Invalid value in FourCC.EterPack");
+						continue;
+					}
+
+					std::string fcc = ee.value().get<std::string>();
+
+					if (fcc.length() != 4)
+					{
+						SPDLOG_ERROR("Invalid EterPack for Lzo1x");
+						continue;
+					}
+
+					m_dwEixFcc = MAKEFOURCC(fcc[0], fcc[1], fcc[2], fcc[3]);
+					SPDLOG_INFO("Changed EterPack FourCC to {0}", fcc.c_str());
 				}
 			}
 		}
