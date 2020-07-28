@@ -45,7 +45,7 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 
 	m_sHeader = *(struct CryptedObjectHeader*)(pbInput);
 
-	uint8_t* pData = nullptr;
+	std::vector<uint8_t> pData;
 
 	if (m_sHeader.dwRealLength < 1 || m_sHeader.dwFourCC != m_pAlgorithm->GetFourCC())
 	{
@@ -60,18 +60,13 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 			return CryptedObjectErrors::InvalidCryptLength;
 		}
 		
-		pData = new uint8_t[m_sHeader.dwAfterCompressLength + 20]; // +20 -.-''
+		pData.resize(m_sHeader.dwAfterCompressLength + 20);
+		pData.reserve(m_sHeader.dwAfterCompressLength + 20);
+		
+		m_pAlgorithm->Decrypt(pbInput + sizeof(struct CryptedObjectHeader), pData.data(), m_sHeader.dwAfterCryptLength, m_adwKeys);
 
-		if (!pData)
+		if (*reinterpret_cast<uint32_t*>(pData.data()) != m_sHeader.dwFourCC) // Verify decryptation
 		{
-			return CryptedObjectErrors::NoMemory;
-		}
-
-		m_pAlgorithm->Decrypt(pbInput + sizeof(struct CryptedObjectHeader), pData, m_sHeader.dwAfterCryptLength, m_adwKeys);
-
-		if (*reinterpret_cast<uint32_t*>(pData) != m_sHeader.dwFourCC) // Verify decryptation
-		{
-			delete[] pData;
 			return CryptedObjectErrors::CryptFail;
 		}
 	}
@@ -81,9 +76,6 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 	{
 		if (!m_pAlgorithm->HaveCryptation())
 		{
-			if (pData)
-				delete[] pData;
-
 			return CryptedObjectErrors::InvalidCryptAlgorithm;
 		}
 
@@ -91,27 +83,22 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 
 		if (m_sHeader.dwAfterCryptLength < 1) // Data is not encrypted
 		{
-			if (pData)
-				delete[] pData;
-
 			if ((nLength - sizeof(struct CryptedObjectHeader)) != m_sHeader.dwAfterCompressLength)
 				return CryptedObjectErrors::InvalidCompressLength;
 
-			pData = new uint8_t[m_sHeader.dwAfterCompressLength + sizeof(uint32_t)];
+			pData.clear();
+			pData.reserve(m_sHeader.dwAfterCompressLength + sizeof(uint32_t));
+			pData.resize(m_sHeader.dwAfterCompressLength + sizeof(uint32_t));
 
-			if (!pData)
-				return CryptedObjectErrors::NoMemory;
+			memcpy_s(pData.data(), m_sHeader.dwAfterCompressLength, pbInput + sizeof(struct CryptedObjectHeader), m_sHeader.dwAfterCompressLength);
 
-			memcpy_s(pData, m_sHeader.dwAfterCompressLength, pbInput + sizeof(struct CryptedObjectHeader), m_sHeader.dwAfterCompressLength);
-
-			if (*reinterpret_cast<uint32_t*>(pData) != m_sHeader.dwFourCC) // Verify decryptation
+			if (*reinterpret_cast<uint32_t*>(pData.data()) != m_sHeader.dwFourCC) // Verify decryptation
 			{
-				delete[] pData;
 				return CryptedObjectErrors::InvalidFourCC;
 			}
 		}
 
-		inputData = pData + sizeof(uint32_t);
+		inputData = pData.data() + sizeof(uint32_t);
 
 		m_pBuffer.reserve(m_sHeader.dwRealLength);
 		m_pBuffer.resize(m_sHeader.dwRealLength);
@@ -119,13 +106,11 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 		size_t nRealLength = m_sHeader.dwRealLength;
 		if (!m_pAlgorithm->Decompress(inputData, m_pBuffer.data(), m_sHeader.dwAfterCompressLength, &nRealLength))
 		{
-			delete[] pData;
 			return CryptedObjectErrors::CompressFail;
 		}
 
 		if (nRealLength != m_sHeader.dwRealLength)
 		{
-			delete[] pData;
 			return CryptedObjectErrors::InvalidRealLength;
 		}
 	}
@@ -133,9 +118,6 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 	{
 		if (m_sHeader.dwAfterCompressLength > 0)
 		{
-			if (pData)
-				delete[] pData;
-
 			return CryptedObjectErrors::Ok;
 		}
 
@@ -145,9 +127,6 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 
 		if (nRealDataLenCalculated != m_sHeader.dwRealLength)
 		{
-			if (pData)
-				delete[] pData;
-
 			return CryptedObjectErrors::InvalidRealLength;
 		}
 
@@ -156,9 +135,6 @@ CryptedObjectErrors CryptedObject::Decrypt(const uint8_t* pbInput, size_t nLengt
 
 		memcpy_s(m_pBuffer.data(), m_pBuffer.size(), pbInput + sizeof(struct CryptedObjectHeader), m_pBuffer.size());
 	}
-
-	if (pData)
-		delete[] pData;
 
 	return CryptedObjectErrors::Ok;
 }
