@@ -241,12 +241,12 @@ namespace Dump
 		i.seekg(0, std::ofstream::beg);
 
 		std::vector<uint8_t> data;
-		data.reserve(sizeof(CryptedObjectHeader));
-		data.resize(sizeof(CryptedObjectHeader));
+		data.reserve(pos);
+		data.resize(pos);
 
 		SPDLOG_DEBUG("Reading input {0} with size {1}", in, sizeof(CryptedObjectHeader));
 
-		i.read(reinterpret_cast<char*>(data.data()), sizeof(CryptedObjectHeader));
+		i.read(reinterpret_cast<char*>(data.data()), pos);
 		i.close();
 
 		o << "File size: " << pos << "\n";
@@ -287,7 +287,7 @@ namespace Dump
 			break;
 		}
 
-		o << "\nCryptedObject size: " << p.GetCryptedObjectSize();
+		o << "\nCryptedObject size: " << p.GetCryptedObjectSize() << "\n";
 
 		std::shared_ptr<CryptedObjectAlgorithm> algorithm;
 
@@ -356,12 +356,12 @@ namespace Dump
 		i.seekg(0, std::ofstream::beg);
 
 		std::vector<uint8_t> data;
-		data.reserve(sizeof(CryptedObjectHeader));
-		data.resize(sizeof(CryptedObjectHeader));
+		data.reserve(pos);
+		data.resize(pos);
 
 		SPDLOG_DEBUG("Reading input {0} with size {1}", in, sizeof(CryptedObjectHeader));
 
-		i.read(reinterpret_cast<char*>(data.data()), sizeof(CryptedObjectHeader));
+		i.read(reinterpret_cast<char*>(data.data()), pos);
 		i.close();
 
 		o << "File size: " << pos << "\n";
@@ -381,8 +381,8 @@ namespace Dump
 		{
 		case ProtoType::MobProto:
 		{
-			o << "\nVersion: " << p.GetVersion();
-			o << "\nFourCC: " << p.GetItemFourCC() << " (" << FOURCC1(p.GetItemFourCC()) << FOURCC2(p.GetItemFourCC()) << FOURCC3(p.GetItemFourCC()) << FOURCC4(p.GetItemFourCC()) << ")";
+			o << "Elements: " << p.GetElements();
+			o << "\nFourCC: " << p.GetMobFourCC() << " (" << FOURCC1(p.GetMobFourCC()) << FOURCC2(p.GetMobFourCC()) << FOURCC3(p.GetMobFourCC()) << FOURCC4(p.GetMobFourCC()) << ")";
 			break;
 		}
 		default:
@@ -390,7 +390,7 @@ namespace Dump
 			break;
 		}
 
-		o << "\nCryptedObject size: " << p.GetCryptedObjectSize();
+		o << "\nCryptedObject size: " << p.GetCryptedObjectSize() << "\n";
 
 		std::shared_ptr<CryptedObjectAlgorithm> algorithm;
 		::CryptedObject obj;
