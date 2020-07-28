@@ -158,6 +158,10 @@ int main(int argc, char* argv[])
 			Dump::EterPack(input, output);
 		else if (type == "cryptobject")
 			Dump::CryptedObject(input, output);
+		else if (type == "item_proto")
+			Dump::ItemProto(input, output);
+		else if (type == "mob_proto")
+			Dump::MobProto(input, output);
 	}
 
 	return EXIT_SUCCESS;
