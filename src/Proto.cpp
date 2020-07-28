@@ -11,7 +11,7 @@
 
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
 
-Proto::Proto() : m_dwVersion(2), m_dwElements(0), m_dwCryptedObjectSize(0), m_dwCryptedObjectFourCC(0), m_dwStride(163), m_dwFccItemProto(MAKEFOURCC('M', 'I', 'P', 'X')), m_dwFccMobProto(MAKEFOURCC('M', 'M', 'P', 'T')), m_dwFccItemProtoOld(MAKEFOURCC('M', 'I', 'P', 'T')), m_eType(ProtoType::MobProto)
+Proto::Proto() : m_dwVersion(2), m_dwElements(0), m_dwCryptedObjectSize(0), m_dwCryptedObjectFourCC(0), m_dwStride(156), m_dwFccItemProto(MAKEFOURCC('M', 'I', 'P', 'X')), m_dwFccMobProto(MAKEFOURCC('M', 'M', 'P', 'T')), m_dwFccItemProtoOld(MAKEFOURCC('M', 'I', 'P', 'T')), m_eType(ProtoType::MobProto)
 {
 
 }
@@ -66,8 +66,8 @@ bool Proto::Unpack(const uint8_t* pbInput, size_t nLength)
 	if (nLength < (dwHeaderSize + sizeof(uint32_t) + sizeof(uint32_t)))
 		return false;
 
-	m_dwElements = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize + sizeof(uint32_t));
-	m_dwCryptedObjectSize = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize + sizeof(uint32_t) + sizeof(uint32_t));
+	m_dwElements = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize);
+	m_dwCryptedObjectSize = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize + sizeof(uint32_t));
 	dwHeaderSize += sizeof(uint32_t) * 2;
 
 	// Get general proto information
@@ -102,22 +102,17 @@ bool Proto::Pack(const uint8_t* pCryptBuffer, size_t nLength, ProtoType eType, E
 		return false;
 
 	m_eType = eType;
-
-	size_t nBufferLen;
-
+	size_t nHeaderLen = (sizeof(uint32_t) * 3);
 	m_dwCryptedObjectFourCC = *reinterpret_cast<const uint32_t*>(pCryptBuffer);
 
-	nBufferLen = (sizeof(uint32_t) * 3) + nLength;
-
-	// Setup variables
 	if (m_eType == ProtoType::ItemProto)
-		nBufferLen += sizeof(uint32_t) * 2;
+		nHeaderLen += sizeof(uint32_t) * 2;
 
 	// 1. Store Crypted Object
-	m_pBuffer.reserve(nBufferLen);
-	m_pBuffer.resize(nBufferLen);
+	m_pBuffer.reserve(nHeaderLen + nLength);
+	m_pBuffer.resize(nHeaderLen + nLength);
 
-	memcpy_s(m_pBuffer.data() + (nBufferLen - nLength), nBufferLen - nLength, pCryptBuffer, nLength);
+	memcpy_s(m_pBuffer.data() + nHeaderLen, nHeaderLen + nLength, pCryptBuffer, nLength);
 
 	// 2. Copy proto info
 	m_dwCryptedObjectSize = static_cast<uint32_t>(nLength);
@@ -125,13 +120,13 @@ bool Proto::Pack(const uint8_t* pCryptBuffer, size_t nLength, ProtoType eType, E
 	switch (m_eType)
 	{
 	case ProtoType::ItemProto:
-		memcpy_s(m_pBuffer.data(), nBufferLen, &m_dwFccItemProto, sizeof(m_dwFccItemProto));
+		memcpy_s(m_pBuffer.data(), nHeaderLen, &m_dwFccItemProto, sizeof(m_dwFccItemProto));
 		break;
 	case ProtoType::ItemProto_Old:
-		memcpy_s(m_pBuffer.data(), nBufferLen, &m_dwFccItemProtoOld, sizeof(m_dwFccItemProtoOld));
+		memcpy_s(m_pBuffer.data(), nHeaderLen, &m_dwFccItemProtoOld, sizeof(m_dwFccItemProtoOld));
 		break;
 	case ProtoType::MobProto:
-		memcpy_s(m_pBuffer.data(), nBufferLen, &m_dwFccMobProto, sizeof(m_dwFccMobProto));
+		memcpy_s(m_pBuffer.data(), nHeaderLen, &m_dwFccMobProto, sizeof(m_dwFccMobProto));
 		break;
 	default:
 		return false;
@@ -140,14 +135,14 @@ bool Proto::Pack(const uint8_t* pCryptBuffer, size_t nLength, ProtoType eType, E
 	size_t offs = sizeof(uint32_t);
 	if (m_eType == ProtoType::ItemProto)
 	{
-		memcpy_s(m_pBuffer.data() + sizeof(uint32_t), nBufferLen - sizeof(uint32_t), &m_dwVersion, sizeof(m_dwVersion));
-		memcpy_s(m_pBuffer.data() + sizeof(uint32_t) + sizeof(uint32_t), nBufferLen - sizeof(uint32_t) - sizeof(uint32_t), &m_dwStride, sizeof(m_dwStride));
+		memcpy_s(m_pBuffer.data() + sizeof(uint32_t), nHeaderLen - sizeof(uint32_t), &m_dwVersion, sizeof(m_dwVersion));
+		memcpy_s(m_pBuffer.data() + sizeof(uint32_t) + sizeof(uint32_t), nHeaderLen - sizeof(uint32_t) - sizeof(uint32_t), &m_dwStride, sizeof(m_dwStride));
 		offs += sizeof(uint32_t) * 2;
 	}
 
-	memcpy_s(m_pBuffer.data() + offs, nBufferLen - offs, &m_dwElements, sizeof(m_dwElements));
+	memcpy_s(m_pBuffer.data() + offs, nHeaderLen - offs, &m_dwElements, sizeof(m_dwElements));
 	offs += sizeof(uint32_t);
-	memcpy_s(m_pBuffer.data() + offs, nBufferLen - offs, &m_dwCryptedObjectSize, sizeof(m_dwCryptedObjectSize));
+	memcpy_s(m_pBuffer.data() + offs, nHeaderLen - offs, &m_dwCryptedObjectSize, sizeof(m_dwCryptedObjectSize));
 
 	return true;
 }
