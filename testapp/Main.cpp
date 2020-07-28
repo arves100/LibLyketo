@@ -6,11 +6,9 @@
 */
 #include "Config.hpp"
 #include "Dump.hpp"
+#include "Log.hpp"
 
 #include <cxxopts.hpp>
-
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
-#include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <iostream>
