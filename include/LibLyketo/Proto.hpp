@@ -20,35 +20,6 @@ enum class ProtoType
 	ItemProto_Old,
 };
 
-struct ItemProtoHeaderNew
-{
-	uint32_t dwFourCC;
-	uint32_t dwVersion;
-	uint32_t dwStride;
-	uint32_t dwElements;
-	uint32_t dwCryptedObjectSize;
-
-	ItemProtoHeaderNew();
-};
-
-struct MobProtoHeader
-{
-	uint32_t dwFourCC;
-	uint32_t dwElements;
-	uint32_t dwCryptedObjectSize;
-
-	MobProtoHeader();
-};
-
-struct ItemProtoHeaderOld
-{
-	uint32_t dwFourCC;
-	uint32_t dwElements;
-	uint32_t dwCryptedObjectSize;
-
-	ItemProtoHeaderOld();
-};
-
 /*!
 	A class that supports Item or Mob Proto format.
 */
@@ -61,31 +32,31 @@ public:
 	bool Unpack(const uint8_t* pbInput, size_t nLength);
 
 	bool Create(ProtoType eType, uint32_t dwElements);
-	bool Pack(const uint8_t* pbInput, size_t nLength, EncryptType sType = EncryptType::CompressAndEncrypt);
-
-	void SetItemProtoVersion(uint32_t dwVersion) { m_sItemProtoNew.dwVersion = dwVersion; }
-	void SetItemProtoStride(uint32_t dwStride) { m_sItemProtoNew.dwStride = dwStride; }
-	void SetItemProtoNewFourCC(uint32_t dwFourCC) { m_sItemProtoNew.dwFourCC = dwFourCC; }
-	void SetItemProtoOldFourCC(uint32_t dwFourCC) { m_sItemProtoOld.dwFourCC = dwFourCC; }
-	void SetMobProtoFourCC(uint32_t dwFourCC) { m_sMobProto.dwFourCC = dwFourCC; }
+	bool Pack(const uint8_t* pCryptBuffer, size_t nLength, ProtoType eType, EncryptType sType = EncryptType::CompressAndEncrypt);
 
 	const uint8_t* GetBuffer() const;
 	size_t GetSize() const;
 	ProtoType GetType() const { return m_eType; }
 
-	struct ItemProtoHeaderNew GetItemProtoNewHeader() const { return m_sItemProtoNew; }
-	struct ItemProtoHeaderOld GetItemProtoOldHeader() const { return m_sItemProtoOld; }
-	struct MobProtoHeader GetMobProtoHeader() const { return m_sMobProto; }
+	uint32_t GetMobFourCC() { return m_dwFccMobProto; }
+	uint32_t GetItemFourCC() { return m_dwFccItemProto; }
+	uint32_t GetItemOldFourCC() { return m_dwFccItemProtoOld; }
+	uint32_t GetStride() { return m_dwStride; }
+	uint32_t GetVersion() { return m_dwVersion; }
+	uint32_t GetElements() { return m_dwElements; }
+	uint32_t GetCryptedObjectFourCC() { return m_dwCryptedObjectFourCC; }
+	uint32_t GetCryptedObjectSize() { return m_dwCryptedObjectSize; }
 
-	CryptedObject* GetCryptedObject() { return &m_cObject; }
+	void SetVersion(uint32_t dwVersion) { m_dwVersion = dwVersion; }
+	void SetMobFourCC(uint32_t dwFcc) { m_dwFccMobProto = dwFcc; }
+	void SetItemOldFourCC(uint32_t dwFcc) { m_dwFccItemProtoOld = dwFcc; }
+	void SetItemFourCC(uint32_t dwFcc) { m_dwFccItemProto = dwFcc; }
 
 private:
-	ItemProtoHeaderOld m_sItemProtoOld;
-	MobProtoHeader m_sMobProto;
-	ItemProtoHeaderNew m_sItemProtoNew;
+	uint32_t m_dwVersion, m_dwElements, m_dwCryptedObjectSize, m_dwCryptedObjectFourCC, m_dwStride;
+	uint32_t m_dwFccItemProto, m_dwFccMobProto, m_dwFccItemProtoOld;
 
 	ProtoType m_eType;
-	CryptedObject m_cObject;
 
 	std::vector<uint8_t> m_pBuffer;
 };

@@ -11,11 +11,7 @@
 
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
 
-ItemProtoHeaderOld::ItemProtoHeaderOld() : dwFourCC(MAKEFOURCC('M', 'I', 'P', 'T')), dwElements(0), dwCryptedObjectSize(0) {}
-MobProtoHeader::MobProtoHeader() : dwFourCC(MAKEFOURCC('M', 'M', 'P', 'T')), dwElements(0), dwCryptedObjectSize(0) {}
-ItemProtoHeaderNew::ItemProtoHeaderNew() : dwFourCC(MAKEFOURCC('M', 'I', 'P', 'X')), dwVersion(0), dwStride(163), dwElements(0), dwCryptedObjectSize(0) {} // Default 40k stride
-
-Proto::Proto() : m_sItemProtoOld(), m_sMobProto(), m_sItemProtoNew(), m_eType(ProtoType::MobProto)
+Proto::Proto() : m_dwVersion(2), m_dwElements(0), m_dwCryptedObjectSize(0), m_dwCryptedObjectFourCC(0), m_dwStride(163), m_dwFccItemProto(MAKEFOURCC('M', 'I', 'P', 'X')), m_dwFccMobProto(MAKEFOURCC('M', 'M', 'P', 'T')), m_dwFccItemProtoOld(MAKEFOURCC('M', 'I', 'P', 'T')), m_eType(ProtoType::MobProto)
 {
 
 }
@@ -26,18 +22,12 @@ Proto::~Proto()
 
 const uint8_t* Proto::GetBuffer() const
 {
-	if (m_pBuffer.size() > 0)
-		return m_pBuffer.data();
-
-	return m_cObject.GetBuffer();
+	return m_pBuffer.data();
 }
 
 size_t Proto::GetSize() const
 {
-	if (m_pBuffer.size() > 0)
-		return m_pBuffer.size();
-
-	return m_cObject.GetSize();
+	return m_pBuffer.size();
 }
 
 bool Proto::Unpack(const uint8_t* pbInput, size_t nLength)
@@ -49,50 +39,46 @@ bool Proto::Unpack(const uint8_t* pbInput, size_t nLength)
 
 	// Get FourCC
 	const uint32_t* dwFourCC = reinterpret_cast<const uint32_t*>(pbInput);
-	uint32_t dwHeaderSize, dwCryptedObjectSize;
+	uint32_t dwHeaderSize = sizeof(uint32_t);
 
-	if (*dwFourCC == m_sItemProtoNew.dwFourCC)
+	if (*dwFourCC == m_dwFccItemProto)
 	{
-		dwHeaderSize = sizeof(struct ItemProtoHeaderNew);
+		dwHeaderSize += sizeof(uint32_t) * 2;
 
 		if (nLength < dwHeaderSize)
 			return false;
 
 		m_eType = ProtoType::ItemProto;
-		m_sItemProtoNew = *reinterpret_cast<const struct ItemProtoHeaderNew*>(pbInput);
-		dwCryptedObjectSize = m_sItemProtoNew.dwCryptedObjectSize;
+		m_dwVersion = *reinterpret_cast<const uint32_t*>(pbInput + sizeof(uint32_t));
+		m_dwStride = *reinterpret_cast<const uint32_t*>(pbInput + sizeof(uint32_t) + sizeof(uint32_t));
 	}
-	else if (*dwFourCC == m_sItemProtoOld.dwFourCC)
+	else if (*dwFourCC == m_dwFccItemProtoOld)
 	{
-		dwHeaderSize = sizeof(struct ItemProtoHeaderOld);
-
-		if (nLength < dwHeaderSize)
-			return false;
-
 		m_eType = ProtoType::ItemProto_Old;
-		m_sItemProtoOld = *reinterpret_cast<const struct ItemProtoHeaderOld*>(pbInput);
-		dwCryptedObjectSize = m_sItemProtoOld.dwCryptedObjectSize;
 	}
-	else if (*dwFourCC == m_sMobProto.dwFourCC)
+	else if (*dwFourCC == m_dwFccMobProto)
 	{
-		dwHeaderSize = sizeof(struct MobProtoHeader);
-
-		if (nLength < dwHeaderSize)
-			return false;
-
 		m_eType = ProtoType::MobProto;
-		m_sMobProto = *reinterpret_cast<const struct MobProtoHeader*>(pbInput);
-		dwCryptedObjectSize = m_sMobProto.dwCryptedObjectSize;
 	}
 	else
 		return false; // Unsupported FourCC
 	
-	// Get general proto information
-	if (nLength < (dwCryptedObjectSize + dwHeaderSize))
+	if (nLength < (dwHeaderSize + sizeof(uint32_t) + sizeof(uint32_t)))
 		return false;
 
-	if (m_cObject.Decrypt(pbInput + dwHeaderSize, nLength - dwHeaderSize) != CryptedObjectErrors::Ok)
+	m_dwElements = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize + sizeof(uint32_t));
+	m_dwCryptedObjectSize = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize + sizeof(uint32_t) + sizeof(uint32_t));
+	dwHeaderSize += sizeof(uint32_t) * 2;
+
+	// Get general proto information
+	if (nLength < (m_dwCryptedObjectSize + dwHeaderSize))
 		return false;
+
+	m_dwCryptedObjectFourCC = *reinterpret_cast<const uint32_t*>(pbInput + dwHeaderSize);
+
+	m_pBuffer.reserve(m_dwCryptedObjectSize);
+	m_pBuffer.resize(m_dwCryptedObjectSize);
+	memcpy_s(m_pBuffer.data(), m_pBuffer.size(), pbInput + dwHeaderSize, nLength - dwHeaderSize);
 
 	return true;
 }
@@ -102,20 +88,7 @@ bool Proto::Create(ProtoType eType, uint32_t dwElements)
 	if (dwElements < 1)
 		return false;
 
-	switch (eType)
-	{
-	case ProtoType::ItemProto:
-		m_sItemProtoNew.dwElements = dwElements;
-		break;
-	case ProtoType::MobProto:
-		m_sMobProto.dwElements = dwElements;
-		break;
-	case ProtoType::ItemProto_Old:
-		m_sItemProtoOld.dwElements = dwElements;
-		break;
-	default:
-		return false;
-	}
+	m_dwElements = dwElements;
 
 	m_pBuffer.clear();
 
@@ -123,64 +96,58 @@ bool Proto::Create(ProtoType eType, uint32_t dwElements)
 	return true;
 }
 
-bool Proto::Pack(const uint8_t* pbInput, size_t nLength, EncryptType sType)
+bool Proto::Pack(const uint8_t* pCryptBuffer, size_t nLength, ProtoType eType, EncryptType sType)
 {
-	if (!pbInput || nLength < 1)
+	if (!pCryptBuffer || nLength < 1)
 		return false;
 
-	uint32_t dwElements;
+	m_eType = eType;
+
 	size_t nBufferLen;
 
-	if (m_cObject.Encrypt(pbInput, nLength, sType) != CryptedObjectErrors::Ok)
-		return false;
+	m_dwCryptedObjectFourCC = *reinterpret_cast<const uint32_t*>(pCryptBuffer);
 
-	size_t cSize = m_cObject.GetSize();
+	nBufferLen = (sizeof(uint32_t) * 3) + nLength;
 
 	// Setup variables
-	switch (m_eType)
-	{
-	case ProtoType::ItemProto:
-		dwElements = m_sItemProtoNew.dwElements;
-		nBufferLen = cSize + sizeof(struct ItemProtoHeaderNew);
-		break;
-	case ProtoType::MobProto:
-		dwElements = m_sMobProto.dwElements;
-		nBufferLen = cSize + sizeof(struct MobProtoHeader);
-		break;
-	case ProtoType::ItemProto_Old:
-		dwElements = m_sItemProtoOld.dwElements;
-		nBufferLen = cSize + sizeof(struct ItemProtoHeaderOld);
-		break;
-	default:
-		return false;
-	}
-
-
+	if (m_eType == ProtoType::ItemProto)
+		nBufferLen += sizeof(uint32_t) * 2;
 
 	// 1. Store Crypted Object
 	m_pBuffer.reserve(nBufferLen);
 	m_pBuffer.resize(nBufferLen);
 
-	memcpy_s(m_pBuffer.data() + (nBufferLen - cSize), nBufferLen - cSize, m_cObject.GetBuffer(), cSize);
+	memcpy_s(m_pBuffer.data() + (nBufferLen - nLength), nBufferLen - nLength, pCryptBuffer, nLength);
 
 	// 2. Copy proto info
+	m_dwCryptedObjectSize = static_cast<uint32_t>(nLength);
+
 	switch (m_eType)
 	{
 	case ProtoType::ItemProto:
-		m_sItemProtoNew.dwCryptedObjectSize = static_cast<uint32_t>(cSize);
-		memcpy_s(m_pBuffer.data(), nBufferLen, &m_sItemProtoNew, sizeof(m_sItemProtoNew));
+		memcpy_s(m_pBuffer.data(), nBufferLen, &m_dwFccItemProto, sizeof(m_dwFccItemProto));
 		break;
 	case ProtoType::ItemProto_Old:
-		m_sItemProtoOld.dwCryptedObjectSize = static_cast<uint32_t>(cSize);
-		memcpy_s(m_pBuffer.data(), nBufferLen, &m_sItemProtoOld, sizeof(m_sItemProtoOld));
+		memcpy_s(m_pBuffer.data(), nBufferLen, &m_dwFccItemProtoOld, sizeof(m_dwFccItemProtoOld));
 		break;
 	case ProtoType::MobProto:
-		m_sMobProto.dwCryptedObjectSize = static_cast<uint32_t>(cSize);
-		memcpy_s(m_pBuffer.data(), nBufferLen, &m_sMobProto, sizeof(m_sMobProto));
+		memcpy_s(m_pBuffer.data(), nBufferLen, &m_dwFccMobProto, sizeof(m_dwFccMobProto));
 		break;
 	default:
 		return false;
 	}
+
+	size_t offs = sizeof(uint32_t);
+	if (m_eType == ProtoType::ItemProto)
+	{
+		memcpy_s(m_pBuffer.data() + sizeof(uint32_t), nBufferLen - sizeof(uint32_t), &m_dwVersion, sizeof(m_dwVersion));
+		memcpy_s(m_pBuffer.data() + sizeof(uint32_t) + sizeof(uint32_t), nBufferLen - sizeof(uint32_t) - sizeof(uint32_t), &m_dwStride, sizeof(m_dwStride));
+		offs += sizeof(uint32_t) * 2;
+	}
+
+	memcpy_s(m_pBuffer.data() + offs, nBufferLen - offs, &m_dwElements, sizeof(m_dwElements));
+	offs += sizeof(uint32_t);
+	memcpy_s(m_pBuffer.data() + offs, nBufferLen - offs, &m_dwCryptedObjectSize, sizeof(m_dwCryptedObjectSize));
 
 	return true;
 }
