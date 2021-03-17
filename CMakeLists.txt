@@ -6,21 +6,20 @@
 cmake_minimum_required(VERSION 3.3)
 project(LibLyketo)
 
-option(LIBLYKETO_ENABLE_TESTAPP "Build LyketoCLI Tool" ON)
+option(LIBLYKETO_ENABLE_TESTAPP "Build Lyketo test application" ON)
 
 if (MSVC)
-	option(STATIC_CRT "Use Visual C++ static CRT" OFF)
-
-	if(STATIC_CRT)
+	if ("${VCPKG_TARGET_TRIPLET}" MATCHES "-static")
 		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+		set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+		set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 	endif()
 endif()
 
 add_subdirectory(ext)
 find_package(Snappy CONFIG REQUIRED)
-
-
+find_package(lzokay CONFIG REQUIRED)
 
 set(SOURCES
 	src/DefaultAlgorithms.cpp
