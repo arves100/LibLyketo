@@ -1,6 +1,8 @@
 # LibLyketo
 A library for messing around with Metin2 file formats.
 
+**NOTICE:** THIS REPOSITORY IS NO LONGER SUPPORTED, ALL DEVELOPERMENT OF LIBLYKETO WAS MOVED INTO https://github.com/OriDevTeam/lyketo.
+
 ## Supported file formats
 - Protos (MIPT, MIPX, MMPT)
 - Crypted Objects (MCOZ and MCSP)
